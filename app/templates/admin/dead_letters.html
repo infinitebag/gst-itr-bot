@@ -1,0 +1,36 @@
+{% extends "admin/base.html" %}
+{% block content %}
+<h2>WhatsApp Dead Letters (latest {{ count }})</h2>
+
+<table border="1" cellspacing="0" cellpadding="4">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>To</th>
+        <th>Reason</th>
+        <th>Retry Count</th>
+        <th>Created At</th>
+        <th>Preview</th>
+        <th>Actions</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for dl in items %}
+        <tr>
+            <td>{{ dl.id }}</td>
+            <td>{{ dl.to_number }}</td>
+            <td>{{ dl.failure_reason }}</td>
+            <td>{{ dl.retry_count }}</td>
+            <td>{{ dl.created_at }}</td>
+            <td>{{ dl.text[:80] }}{% if dl.text|length > 80 %}...{% endif %}</td>
+            <td>
+                <form method="post" action="/admin/whatsapp/dead-letters/{{ dl.id }}/replay">
+                    <input type="hidden" name="admin_token" value="{{ admin_token }}">
+                    <button type="submit">Replay</button>
+                </form>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,14 +1,23 @@
+# app/main.py
+import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from app.core.db import engine
-from app.infrastructure.db.base import Base
-from app.api.routes import health, whatsapp
+from app.core.db import db_ping
+from app.api.routes import api_router
 
-app = FastAPI()
+logger = logging.getLogger("app.main")
 
-@app.on_event("startup")
-async def startup():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("🚀 Application startup")
+    try:
+        await db_ping()
+        logger.info("✅ Database connected")
+    except Exception:
+        logger.exception("❌ Database connection failed")
+        raise
+    yield
+    logger.info("🛑 Application shutdown")
 
-app.include_router(health.router)
-app.include_router(whatsapp.router)
+app = FastAPI(lifespan=lifespan)
+app.include_router(api_router)

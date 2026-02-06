@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title or "Admin" }}</title>
+    <link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+<nav>
+    <a href="/admin/ui/dead-letters">Dead Letters</a> |
+    <a href="/admin/ui/usage">Usage</a> |
+    <a href="/admin/ca/dashboard">CA Dashboard</a>
+</nav>
+<hr/>
+<div class="content">
+    {% block content %}{% endblock %}
+</div>
+</body>
+</html>

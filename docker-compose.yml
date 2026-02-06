@@ -1,0 +1,100 @@
+name: gst_itr_bot
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: gst_itr_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: gst_itr_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d gst_itr_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: gst_itr_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gst_itr_app
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      # Docker internal hostnames (override any localhost values)
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/gst_itr_db
+      REDIS_URL: redis://redis:6379/0
+      PORT: "8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+      uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --reload
+      "
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gst_itr_worker
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/gst_itr_db
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "
+      rq worker default --url ${REDIS_URL:-redis://redis:6379/0}
+      "
+
+  ngrok:
+    image: ngrok/ngrok:alpine
+    profiles: ["tunnel"]
+    container_name: gst_itr_ngrok
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+      NGROK_NO_UPDATE: "true"
+    # ngrok web UI on http://localhost:4040
+    ports:
+      - "4040:4040"
+    command: ["http", "app:8000", "--log=stdout"]
+
+volumes:
+  pgdata:
+  redisdata:

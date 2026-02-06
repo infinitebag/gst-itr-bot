@@ -1,0 +1,6 @@
+from __future__ import annotations
+from typing import Protocol, Dict, Any
+
+class GSTProvider(Protocol):
+    async def validate_gstin(self, gstin: str) -> Dict[str, Any]: ...
+    async def get_taxpayer_profile(self, gstin: str) -> Dict[str, Any]: ...

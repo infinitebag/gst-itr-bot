@@ -1,5 +1,7 @@
 from datetime import date
+
 from pydantic import BaseModel
+
 
 class InvoiceData(BaseModel):
     id: str
@@ -7,6 +9,7 @@ class InvoiceData(BaseModel):
     invoice_date: date
     taxable_value: float
     tax_amount: float
+
 
 class Gstr3bSummary(BaseModel):
     user_id: str

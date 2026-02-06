@@ -1,0 +1,29 @@
+{% extends "admin/base.html" %}
+{% block content %}
+<h2>WhatsApp Usage Stats (last {{ days }} day(s))</h2>
+
+<p>Total messages (sent): <strong>{{ total_sent }}</strong></p>
+<p>Total dropped by rate limit: <strong>{{ total_dropped }}</strong></p>
+
+<h3>Top users (by sent messages)</h3>
+<table border="1" cellspacing="0" cellpadding="4">
+    <thead>
+    <tr>
+        <th>To Number</th>
+        <th>Sent Count</th>
+        <th>Dropped (rate limit)</th>
+        <th>Last Message At</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for row in users %}
+        <tr>
+            <td>{{ row.to_number }}</td>
+            <td>{{ row.sent_count }}</td>
+            <td>{{ row.dropped_count }}</td>
+            <td>{{ row.last_at }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

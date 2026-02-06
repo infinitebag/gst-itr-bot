@@ -1,0 +1,27 @@
+{% extends "admin/base.html" %}
+{% block content %}
+<h2>CA Client Dashboard</h2>
+
+<table border="1" cellspacing="0" cellpadding="4">
+    <thead>
+    <tr>
+        <th>Business Name</th>
+        <th>GSTIN</th>
+        <th>WhatsApp</th>
+        <th>Invoice Count</th>
+        <th>Last Invoice</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for c in clients %}
+        <tr>
+            <td>{{ c.name }}</td>
+            <td>{{ c.gstin }}</td>
+            <td>{{ c.whatsapp_number }}</td>
+            <td>{{ c.invoice_count }}</td>
+            <td>{{ c.last_invoice or '-' }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

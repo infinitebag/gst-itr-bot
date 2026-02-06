@@ -1,0 +1,6 @@
+-r requirements-base.txt
+
+# for Render / Railway / Docker
+# If you want, you can pin exact versions only here later, e.g.:
+# fastapi==0.115.0
+# uvicorn[standard]==0.30.0

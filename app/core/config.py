@@ -1,29 +1,71 @@
-import os
-from dotenv import load_dotenv
+# app/core/config.py
 
-load_dotenv()
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-class Settings:
-    ENV = os.getenv("ENV", "dev")
-    PORT = int(os.getenv("PORT", 8000))
 
-    WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN")
-    WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
-    WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
+class Settings(BaseSettings):
+    # Pydantic Settings v2 config
+    model_config = SettingsConfigDict(
+        env_file=(".env.local", ".env"),  # reads .env.local first
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
-    DATABASE_URL = os.getenv("DATABASE_URL")
+    # ---- Core ----
+    ENV: str = Field(default="dev")
+    PORT: int = Field(default=8000)
 
-    SARVAM_API_KEY = os.getenv("SARVAM_API_KEY")
-    SARVAM_STT_URL = os.getenv("SARVAM_STT_URL")
+    # ---- WhatsApp Cloud API / AiSensy ----
+    WHATSAPP_VERIFY_TOKEN: str | None = None
+    WHATSAPP_ACCESS_TOKEN: str | None = None
+    WHATSAPP_PHONE_NUMBER_ID: str | None = None
 
-    BHASHINI_API_KEY = os.getenv("BHASHINI_API_KEY")
-    BHASHINI_TRANSLATION_URL = os.getenv("BHASHINI_TRANSLATION_URL")
+    # AiSensy (India-first BSP)
+    AISENSY_API_KEY: str = Field(default="")
+    AISENSY_PROJECT_ID: str = Field(default="")
 
-    GST_SANDBOX_BASE_URL = os.getenv("GST_SANDBOX_BASE_URL")
-    GST_SANDBOX_CLIENT_ID = os.getenv("GST_SANDBOX_CLIENT_ID")
-    GST_SANDBOX_CLIENT_SECRET = os.getenv("GST_SANDBOX_CLIENT_SECRET")
+    # ---- Database ----
+    DATABASE_URL: str = Field(
+        default="postgresql+asyncpg://postgres:postgres@localhost:5432/gst_itr_db"
+    )
 
-    ITR_SANDBOX_BASE_URL = os.getenv("ITR_SANDBOX_BASE_URL")
-    ITR_SANDBOX_API_KEY = os.getenv("ITR_SANDBOX_API_KEY")
+    # ---- Sarvam STT ----
+    SARVAM_API_KEY: str | None = None
+    SARVAM_STT_URL: str | None = None
 
+    # ---- Bhashini ----
+    BHASHINI_API_KEY: str | None = None
+    BHASHINI_TRANSLATION_URL: str | None = None
+
+    # ---- GST Sandbox (NIC / GSP) ----
+    GST_SANDBOX_BASE_URL: str | None = None
+    GST_SANDBOX_CLIENT_ID: str | None = None
+    GST_SANDBOX_CLIENT_SECRET: str | None = None
+
+    GST_SANDBOX_GSTIN: str | None = None
+
+    # ---- ITR Sandbox (ClearTax etc.) ----
+    ITR_SANDBOX_BASE_URL: str | None = None
+    ITR_SANDBOX_API_KEY: str | None = None
+
+    # ---- Admin / Debug ----
+    ADMIN_API_KEY: str = Field(default="dev_admin_key")
+    DEBUG_ADMIN_MSISDN: str = Field(default="")  # e.g. "91XXXXXXXXXX"
+
+    # ---- Session / Conversation ----
+    SESSION_IDLE_MINUTES: int = Field(default=10)
+
+    # ---- MasterGST Sandbox ----
+    MASTERGST_BASE_URL: str = Field(default="https://sandbox-apis.mastergst.com")
+    MASTERGST_API_KEY: str = Field(default="")
+    MASTERGST_CLIENT_ID: str = Field(default="")
+    MASTERGST_CLIENT_SECRET: str = Field(default="")
+
+    # ---- OCR & Queue ----
+    OCR_BACKEND: str = Field(default="tesseract")  # or "google", "aws_textract"
+    REDIS_URL: str = Field(default="redis://localhost:6379/0")
+
+
+# Single global settings object used everywhere
 settings = Settings()

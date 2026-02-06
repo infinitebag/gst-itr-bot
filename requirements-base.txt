@@ -1,0 +1,46 @@
+# --- Web framework / API ---
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
+# --- DB / ORM ---
+sqlalchemy>=2.0.0
+asyncpg>=0.29.0
+greenlet>=3.0.0
+
+# --- Cache / queues ---
+redis>=5.0.0
+arq>=0.26.0
+rq
+
+# --- Config / utils / logging ---
+python-dotenv>=1.0.0
+loguru>=0.7.0
+pydantic>=2.7,<3.0
+pydantic-settings>=2.0,<3.0
+python-multipart
+pytesseract
+
+# --- Templates / admin UI ---
+jinja2>=3.1.0
+
+# --- HTTP clients ---
+requests>=2.31.0
+aiohttp>=3.9.0
+
+# --- OCR & PDF tools ---
+Pillow>=10.0.0
+PyMuPDF>=1.24.0        # PDF reading
+reportlab>=4.0.0       # PDF generation / invoice exports
+
+# --- Cloud OCR (Google Vision) ---
+google-cloud-vision>=3.11.0
+google-cloud-storage>=2.14.0
+
+# --- NOTE ---
+# PaddleOCR is omitted here (Mac M1 is painful).
+# You can add it later in a separate "ocr-paddle.txt" if you deploy to Linux.
+# paddlepaddle>=2.6.0
+# paddleocr>=2.7.0
+
+alembic==1.13.2
+httpx==0.27.2
