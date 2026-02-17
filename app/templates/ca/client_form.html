@@ -1,0 +1,93 @@
+{% extends "ca/base.html" %}
+{% block content %}
+
+{% if error %}
+<div class="ca-alert ca-alert-error">
+    {% for line in error.split('\n') %}
+    <p style="margin:4px 0;">{{ line }}</p>
+    {% endfor %}
+</div>
+{% endif %}
+
+<form method="post" action="{{ '/ca/clients/' ~ client.id if client else '/ca/clients' }}" class="ca-form">
+
+    <div class="ca-form-section">
+        <h3>Business Information</h3>
+
+        <div class="ca-form-group">
+            <label for="name">Business Name *</label>
+            <input type="text" id="name" name="name" required value="{{ client.name if client else '' }}" placeholder="ABC Traders Pvt Ltd">
+        </div>
+
+        <div class="ca-form-row">
+            <div class="ca-form-group">
+                <label for="gstin">GSTIN</label>
+                <input type="text" id="gstin" name="gstin" maxlength="15" value="{{ client.gstin if client and client.gstin else '' }}" placeholder="22AAAAA0000A1Z5" style="text-transform: uppercase;">
+                <small class="ca-help-text">15-character GST ID (e.g. 22AAAAA0000A1Z5)</small>
+            </div>
+            <div class="ca-form-group">
+                <label for="pan">PAN</label>
+                <input type="text" id="pan" name="pan" maxlength="10" value="{{ client.pan if client and client.pan else '' }}" placeholder="AAAAA0000A" style="text-transform: uppercase;">
+                <small class="ca-help-text">10-character PAN (e.g. AAAAA0000A)</small>
+            </div>
+        </div>
+
+        <div class="ca-form-row">
+            <div class="ca-form-group">
+                <label for="business_type">Business Type</label>
+                <select id="business_type" name="business_type">
+                    <option value="">-- Select --</option>
+                    <option value="sole_prop" {{ 'selected' if client and client.business_type == 'sole_prop' else '' }}>Sole Proprietorship</option>
+                    <option value="partnership" {{ 'selected' if client and client.business_type == 'partnership' else '' }}>Partnership</option>
+                    <option value="pvt_ltd" {{ 'selected' if client and client.business_type == 'pvt_ltd' else '' }}>Private Limited</option>
+                    <option value="llp" {{ 'selected' if client and client.business_type == 'llp' else '' }}>LLP</option>
+                    <option value="public_ltd" {{ 'selected' if client and client.business_type == 'public_ltd' else '' }}>Public Limited</option>
+                    <option value="trust" {{ 'selected' if client and client.business_type == 'trust' else '' }}>Trust</option>
+                    <option value="huf" {{ 'selected' if client and client.business_type == 'huf' else '' }}>HUF</option>
+                </select>
+            </div>
+            <div class="ca-form-group">
+                <label for="state_code">State Code</label>
+                <input type="text" id="state_code" name="state_code" maxlength="2" value="{{ client.state_code if client and client.state_code else '' }}" placeholder="36">
+            </div>
+        </div>
+    </div>
+
+    <div class="ca-form-section">
+        <h3>Contact Details</h3>
+
+        <div class="ca-form-row">
+            <div class="ca-form-group">
+                <label for="whatsapp_number">WhatsApp Number</label>
+                <input type="text" id="whatsapp_number" name="whatsapp_number" inputmode="tel" value="{{ client.whatsapp_number if client and client.whatsapp_number else '' }}" placeholder="9876543210">
+                <small class="ca-help-text">Enter mobile number. Country code 91 is added automatically. E.g. 9876543210</small>
+            </div>
+            <div class="ca-form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" value="{{ client.email if client and client.email else '' }}" placeholder="contact@abctraders.com">
+            </div>
+        </div>
+
+        <div class="ca-form-group">
+            <label for="address">Address</label>
+            <textarea id="address" name="address" rows="3" placeholder="Full business address">{{ client.address if client and client.address else '' }}</textarea>
+        </div>
+    </div>
+
+    <div class="ca-form-section">
+        <h3>Notes</h3>
+        <div class="ca-form-group">
+            <label for="notes">Internal Notes</label>
+            <textarea id="notes" name="notes" rows="3" placeholder="Any additional notes about this client...">{{ client.notes if client and client.notes else '' }}</textarea>
+        </div>
+    </div>
+
+    <div class="ca-form-actions">
+        <button type="submit" class="ca-btn ca-btn-primary">
+            {{ 'Update Client' if client else 'Add Client' }}
+        </button>
+        <a href="{{ '/ca/clients/' ~ client.id if client else '/ca/clients' }}" class="ca-btn ca-btn-outline">Cancel</a>
+    </div>
+</form>
+
+{% endblock %}

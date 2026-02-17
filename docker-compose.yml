@@ -2,7 +2,7 @@ name: gst_itr_bot
 
 services:
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: gst_itr_db
     restart: unless-stopped
     environment:
@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: gst_itr_db
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -24,7 +24,7 @@ services:
     container_name: gst_itr_redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redisdata:/data
@@ -38,12 +38,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: ${DOCKER_TARGET:-development}
     container_name: gst_itr_app
     restart: unless-stopped
     env_file:
       - .env.docker
     environment:
-      # Docker internal hostnames (override any localhost values)
+      # Docker internal hostnames (override localhost values from .env.docker)
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/gst_itr_db
       REDIS_URL: redis://redis:6379/0
       PORT: "8000"
@@ -54,20 +55,37 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+    # Dev: --reload for auto-restart on code changes
+    # Prod: override with DOCKER_TARGET=production and no --reload
     command: >
       sh -c "
-      uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --reload
+      echo 'Running database migrations...' &&
+      alembic upgrade head &&
+      echo 'Migrations complete.' &&
+      if [ \"$${ENV:-dev}\" = 'production' ]; then
+        uvicorn app.main:app --host 0.0.0.0 --port $${PORT:-8000};
+      else
+        uvicorn app.main:app --host 0.0.0.0 --port $${PORT:-8000} --reload;
+      fi
       "
 
   worker:
     build:
       context: .
       dockerfile: Dockerfile
+      target: ${DOCKER_TARGET:-development}
     container_name: gst_itr_worker
     restart: unless-stopped
     env_file:
       - .env.docker
     environment:
+      # Docker internal hostnames (override localhost values from .env.docker)
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/gst_itr_db
       REDIS_URL: redis://redis:6379/0
     depends_on:
@@ -80,20 +98,15 @@ services:
       rq worker default --url ${REDIS_URL:-redis://redis:6379/0}
       "
 
-  ngrok:
-    image: ngrok/ngrok:alpine
+  tunnel:
+    image: cloudflare/cloudflared:latest
     profiles: ["tunnel"]
-    container_name: gst_itr_ngrok
+    container_name: gst_itr_tunnel
     restart: unless-stopped
     depends_on:
-      - app
-    environment:
-      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
-      NGROK_NO_UPDATE: "true"
-    # ngrok web UI on http://localhost:4040
-    ports:
-      - "4040:4040"
-    command: ["http", "app:8000", "--log=stdout"]
+      app:
+        condition: service_healthy
+    command: ["tunnel", "--no-autoupdate", "--url", "http://app:8000"]
 
 volumes:
   pgdata:

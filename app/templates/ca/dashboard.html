@@ -1,0 +1,99 @@
+{% extends "ca/base.html" %}
+{% block content %}
+
+<div class="ca-stats-grid">
+    <div class="ca-stat-card">
+        <div class="ca-stat-value">{{ total_clients }}</div>
+        <div class="ca-stat-label">Active Clients</div>
+    </div>
+    <div class="ca-stat-card">
+        <div class="ca-stat-value">{{ total_invoices }}</div>
+        <div class="ca-stat-label">Total Invoices</div>
+    </div>
+    <div class="ca-stat-card {{ 'ca-stat-danger' if overdue_count > 0 else '' }}">
+        <div class="ca-stat-value">{{ overdue_count }}</div>
+        <div class="ca-stat-label">Overdue Filings</div>
+    </div>
+    <div class="ca-stat-card {{ 'ca-stat-danger' if pending_itr_count|default(0) > 0 else '' }}">
+        <a href="/ca/itr-reviews?status=pending_ca_review" style="text-decoration:none; color:inherit;">
+            <div class="ca-stat-value">{{ pending_itr_count|default(0) }}</div>
+            <div class="ca-stat-label">Pending ITR Reviews</div>
+        </a>
+    </div>
+    <div class="ca-stat-card {{ 'ca-stat-danger' if pending_gst_count|default(0) > 0 else '' }}">
+        <a href="/ca/gst-reviews?status=pending_ca_review" style="text-decoration:none; color:inherit;">
+            <div class="ca-stat-value">{{ pending_gst_count|default(0) }}</div>
+            <div class="ca-stat-label">Pending GST Reviews</div>
+        </a>
+    </div>
+</div>
+
+<!-- Upcoming Deadlines -->
+<section class="ca-section">
+    <div class="ca-section-header">
+        <h2>Upcoming Deadlines</h2>
+        <a href="/ca/deadlines" class="ca-btn ca-btn-sm">View All</a>
+    </div>
+    {% if deadlines %}
+    <table class="ca-table">
+        <thead>
+            <tr>
+                <th>Form</th>
+                <th>Period</th>
+                <th>Due Date</th>
+                <th>Days Left</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in deadlines %}
+            <tr>
+                <td><strong>{{ d.form_name }}</strong></td>
+                <td>{{ d.period }}</td>
+                <td>{{ d.due_date.isoformat() }}</td>
+                <td>{{ d.days_remaining }}</td>
+                <td>
+                    <span class="ca-badge ca-badge-{{ d.status }}">{{ d.status | replace('_', ' ') | title }}</span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="ca-empty">No upcoming deadlines.</p>
+    {% endif %}
+</section>
+
+<!-- Recent Activity -->
+<section class="ca-section">
+    <div class="ca-section-header">
+        <h2>Recent Invoices</h2>
+        <a href="/ca/clients" class="ca-btn ca-btn-sm">View Clients</a>
+    </div>
+    {% if recent_invoices %}
+    <table class="ca-table">
+        <thead>
+            <tr>
+                <th>Client</th>
+                <th>Invoice #</th>
+                <th>Date</th>
+                <th>Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for inv in recent_invoices %}
+            <tr>
+                <td>{{ inv.client_name }}</td>
+                <td>{{ inv.invoice_number or '-' }}</td>
+                <td>{{ inv.invoice_date.isoformat() if inv.invoice_date else '-' }}</td>
+                <td class="ca-text-right">{{ "%.2f"|format(inv.total_amount) if inv.total_amount else '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="ca-empty">No recent invoices. Add clients and upload invoices via WhatsApp to see activity here.</p>
+    {% endif %}
+</section>
+
+{% endblock %}

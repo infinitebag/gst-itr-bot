@@ -1,0 +1,45 @@
+# Git
+.git
+.gitignore
+
+# Environment files (secrets — NEVER bake into images)
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+venv/
+.venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker (avoid recursive build context)
+docker-compose*.yml
+
+# Docs (not needed in runtime image)
+README.md
+CONTRIBUTING.md
+LICENSE
+
+# Tests (not needed in production image)
+tests/
+
+# Logs / temp
+*.log
+*.tmp

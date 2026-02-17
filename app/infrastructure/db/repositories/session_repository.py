@@ -39,7 +39,15 @@ class SessionRepository:
             active=True,
         )
         self.db.add(new_session)
-        await self.db.commit()
+        try:
+            await self.db.commit()
+        except Exception:
+            # Handle race condition: another request created the session concurrently
+            await self.db.rollback()
+            session = await self.get_by_user(user_id)
+            if session:
+                return session
+            raise  # Re-raise if it's a different error
         await self.db.refresh(new_session)
         return new_session
 
@@ -47,7 +55,7 @@ class SessionRepository:
         for k, v in kwargs.items():
             setattr(session, k, v)
 
-        # last_updated will be maintained by DB on update
+        # updated_at will be maintained by DB onupdate trigger
         session.updated_at = datetime.now(timezone.utc)
         self.db.add(session)
         await self.db.commit()

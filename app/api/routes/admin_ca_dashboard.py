@@ -1,11 +1,11 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.api.deps import require_admin_token
 from app.core.db import get_db
 from app.infrastructure.db.models import BusinessClient, Invoice
 
@@ -14,18 +14,11 @@ templates = Jinja2Templates(directory="app/templates")
 router = APIRouter(prefix="/admin/ca", tags=["admin-ca"])
 
 
-async def require_admin(x_admin_token: str = Header(None, alias="X-Admin-Token")):
-    if not settings.ADMIN_API_KEY:
-        raise HTTPException(status_code=500, detail="ADMIN_API_KEY not configured")
-    if x_admin_token != settings.ADMIN_API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid admin token")
-
-
 @router.get("/dashboard")
 async def ca_dashboard(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: None = Depends(require_admin),
+    _: None = Depends(require_admin_token),
 ):
     stmt = select(BusinessClient)
     result = await db.execute(stmt)

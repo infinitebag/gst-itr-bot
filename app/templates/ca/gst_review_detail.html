@@ -1,0 +1,222 @@
+{% extends "ca/base.html" %}
+{% block content %}
+
+<!-- Filing Header -->
+<div class="ca-client-header">
+    <div class="ca-client-info">
+        <h2>{{ filing.form_type }} — Period {{ filing.period }}</h2>
+        <span class="ca-badge ca-badge-{{ filing.status }}">
+            {{ filing.status | replace('_', ' ') | title }}
+        </span>
+        {% if filing.is_nil %}
+            <span class="ca-badge ca-badge-draft">NIL Filing</span>
+        {% endif %}
+    </div>
+    <div class="ca-client-actions">
+        <a href="/ca/gst-reviews" class="ca-btn ca-btn-sm ca-btn-outline">Back to List</a>
+    </div>
+</div>
+
+<!-- Filing Details Grid -->
+<div class="ca-detail-grid">
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">Client</span>
+        <span class="ca-detail-value">{{ filing.user_name }}</span>
+    </div>
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">WhatsApp</span>
+        <span class="ca-detail-value">{{ filing.user_wa or '-' }}</span>
+    </div>
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">GSTIN</span>
+        <span class="ca-detail-value ca-mono">{{ filing.gstin or '-' }}</span>
+    </div>
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">Period</span>
+        <span class="ca-detail-value">{{ filing.period }}</span>
+    </div>
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">Form Type</span>
+        <span class="ca-detail-value">{{ filing.form_type }}</span>
+    </div>
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">Invoices</span>
+        <span class="ca-detail-value">{{ filing.invoice_count }}</span>
+    </div>
+    {% if filing.reference_number %}
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">Reference #</span>
+        <span class="ca-detail-value ca-mono">{{ filing.reference_number }}</span>
+    </div>
+    {% endif %}
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">Created</span>
+        <span class="ca-detail-value">{{ filing.created_at.strftime('%d %b %Y %H:%M') if filing.created_at else '-' }}</span>
+    </div>
+    {% if filing.ca_reviewed_at %}
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">Reviewed At</span>
+        <span class="ca-detail-value">{{ filing.ca_reviewed_at.strftime('%d %b %Y %H:%M') }}</span>
+    </div>
+    {% endif %}
+    {% if filing.ca_notes %}
+    <div class="ca-detail-item ca-detail-wide">
+        <span class="ca-detail-label">CA Notes</span>
+        <span class="ca-detail-value">{{ filing.ca_notes }}</span>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Summary -->
+{% if not filing.is_nil %}
+<section class="ca-section">
+    <div class="ca-section-header">
+        <h2>Filing Summary</h2>
+    </div>
+
+    <div class="ca-detail-grid">
+        <div class="ca-detail-item">
+            <span class="ca-detail-label">Total Taxable Value</span>
+            <span class="ca-detail-value">{{ "%.2f"|format(filing.total_taxable) }}</span>
+        </div>
+        <div class="ca-detail-item">
+            <span class="ca-detail-label">Total Tax</span>
+            <span class="ca-detail-value">{{ "%.2f"|format(filing.total_tax) }}</span>
+        </div>
+        <div class="ca-detail-item">
+            <span class="ca-detail-label">Total Amount</span>
+            <span class="ca-detail-value"><strong>{{ "%.2f"|format(filing.total_taxable + filing.total_tax) }}</strong></span>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- GSTR-3B/GSTR-1 Specific Data -->
+{% if filing.payload %}
+    {% if filing.payload.get('gstr3b_summary') %}
+    <section class="ca-section">
+        <div class="ca-section-header">
+            <h2>GSTR-3B Summary</h2>
+        </div>
+        <div class="ca-detail-grid">
+            {% set s = filing.payload.gstr3b_summary %}
+            {% if s.get('outward_taxable_value') is not none %}
+            <div class="ca-detail-item">
+                <span class="ca-detail-label">Outward Taxable Value</span>
+                <span class="ca-detail-value">{{ "%.2f"|format(s.outward_taxable_value|float) }}</span>
+            </div>
+            {% endif %}
+            {% if s.get('net_tax_payable') is not none %}
+            <div class="ca-detail-item">
+                <span class="ca-detail-label">Net Tax Payable</span>
+                <span class="ca-detail-value"><strong>{{ "%.2f"|format(s.net_tax_payable|float) }}</strong></span>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+{% endif %}
+
+<!-- Invoice Table -->
+{% if filing.invoices %}
+<section class="ca-section">
+    <div class="ca-section-header">
+        <h2>Invoices ({{ filing.invoice_count }})</h2>
+    </div>
+
+    <table class="ca-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Invoice Number</th>
+                <th>Date</th>
+                <th>Supplier GSTIN</th>
+                <th class="ca-text-right">Taxable Value</th>
+                <th class="ca-text-right">Tax</th>
+                <th class="ca-text-right">Total</th>
+                <th>Rate</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for inv in filing.invoices %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td class="ca-mono">{{ inv.get('invoice_number', '-') }}</td>
+                <td>{{ inv.get('invoice_date', '-') }}</td>
+                <td class="ca-mono">{{ inv.get('supplier_gstin', '-') }}</td>
+                <td class="ca-text-right">{{ "%.2f"|format(inv.get('taxable_value', 0)|float) }}</td>
+                <td class="ca-text-right">{{ "%.2f"|format(inv.get('tax_amount', 0)|float) }}</td>
+                <td class="ca-text-right"><strong>{{ "%.2f"|format(inv.get('total_amount', 0)|float) }}</strong></td>
+                <td>{{ "%.1f%%"|format(inv.get('tax_rate', 0)|float) if inv.get('tax_rate') else '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endif %}
+
+<!-- NIL Filing Info -->
+{% if filing.is_nil %}
+<section class="ca-section">
+    <div class="ca-section-header">
+        <h2>NIL Filing Details</h2>
+    </div>
+    <div class="ca-empty-state">
+        <h3>NIL Return</h3>
+        <p>This is a NIL filing — the client declared no business activity for this period.</p>
+        <p>No sales, purchases, tax liability, or ITC claimed.</p>
+    </div>
+</section>
+{% endif %}
+
+<!-- Actions -->
+{% if filing.allowed_transitions %}
+<section class="ca-section">
+    <div class="ca-section-header">
+        <h2>Actions</h2>
+    </div>
+
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        {% if 'ca_approved' in filing.allowed_transitions %}
+        <form action="/ca/gst-reviews/{{ filing.id }}/approve" method="post" style="display:inline;">
+            <input type="hidden" name="ca_notes" value="">
+            <button type="submit" class="ca-btn" onclick="return confirm('Approve this GST filing?');">
+                Approve
+            </button>
+        </form>
+        {% endif %}
+
+        {% if 'submitted' in filing.allowed_transitions %}
+        <form action="/ca/gst-reviews/{{ filing.id }}/submit" method="post" style="display:inline;">
+            <button type="submit" class="ca-btn" onclick="return confirm('Submit this filing to MasterGST? This action cannot be undone.');">
+                Submit to MasterGST
+            </button>
+        </form>
+        {% endif %}
+
+        {% if 'changes_requested' in filing.allowed_transitions %}
+        <form action="/ca/gst-reviews/{{ filing.id }}/request-changes" method="post" style="display:flex; gap:8px; align-items:flex-end;">
+            <div>
+                <label style="font-size:0.85em; color:#666;">Notes for client:</label>
+                <textarea name="ca_notes" required rows="2" cols="40" style="display:block; padding:6px; border:1px solid #ddd; border-radius:4px;" placeholder="Describe what needs to change..."></textarea>
+            </div>
+            <button type="submit" class="ca-btn ca-btn-danger" onclick="return confirm('Request changes?');">
+                Request Changes
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Response Data (if submitted) -->
+{% if filing.response_data %}
+<section class="ca-section">
+    <div class="ca-section-header">
+        <h2>API Response</h2>
+    </div>
+    <pre style="background:#f8f9fa; padding:16px; border-radius:6px; overflow-x:auto; font-size:0.85em;">{{ filing.response_data | tojson(indent=2) }}</pre>
+</section>
+{% endif %}
+
+{% endblock %}

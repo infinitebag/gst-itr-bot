@@ -1,0 +1,56 @@
+{% extends "admin/base.html" %}
+{% block content %}
+
+<div class="admin-stats-grid">
+    <div class="admin-stat-card {% if pending_cas|length > 0 %}warning{% endif %}">
+        <div class="admin-stat-value">{{ pending_cas|length }}</div>
+        <div class="admin-stat-label">Pending Registrations</div>
+    </div>
+</div>
+
+{% if pending_cas %}
+<table class="admin-table">
+    <thead>
+    <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Phone</th>
+        <th>ICAI Membership #</th>
+        <th>Registered</th>
+        <th>Actions</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for ca in pending_cas %}
+        <tr>
+            <td><strong>{{ ca.name }}</strong></td>
+            <td class="mono">{{ ca.email }}</td>
+            <td>{{ ca.phone or '-' }}</td>
+            <td class="mono">{{ ca.membership_number or '-' }}</td>
+            <td>{{ ca.created_at[:10] if ca.created_at else '-' }}</td>
+            <td>
+                <div class="inline-form">
+                    <form method="post" action="/admin/ca/{{ ca.id }}/approve" style="display:inline;">
+                        <input type="hidden" name="admin_token" value="{{ admin_token }}">
+                        <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                    </form>
+                    <form method="post" action="/admin/ca/{{ ca.id }}/reject" style="display:inline;"
+                          onsubmit="return confirm('Reject this CA registration? This action cannot be undone.');">
+                        <input type="hidden" name="admin_token" value="{{ admin_token }}">
+                        <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">&#9989;</div>
+    <h3>All Caught Up</h3>
+    <p>No pending CA registrations at this time.</p>
+</div>
+{% endif %}
+
+{% endblock %}

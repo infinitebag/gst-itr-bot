@@ -1,0 +1,290 @@
+{% extends "ca/base.html" %}
+{% block content %}
+
+<!-- Draft Header -->
+<div class="ca-client-header">
+    <div class="ca-client-info">
+        <h2>{{ draft.form_type }} &mdash; AY {{ draft.assessment_year }}</h2>
+        <span class="ca-badge ca-badge-{{ draft.status }}">{{ draft.status | replace('_', ' ') | title }}</span>
+    </div>
+    <div class="ca-client-actions">
+        <a href="/ca/itr-reviews" class="ca-btn ca-btn-sm ca-btn-outline">Back to List</a>
+    </div>
+</div>
+
+<!-- Client / Draft Info -->
+<div class="ca-detail-grid">
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">Client</span>
+        <span class="ca-detail-value">{{ draft.user_name }}</span>
+    </div>
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">WhatsApp</span>
+        <span class="ca-detail-value">{{ draft.user_wa or '-' }}</span>
+    </div>
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">PAN</span>
+        <span class="ca-detail-value ca-mono">{{ draft.pan or '-' }}</span>
+    </div>
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">Recommended Regime</span>
+        <span class="ca-detail-value">
+            {% if draft.recommended_regime %}
+                {{ draft.recommended_regime | title }} Regime
+            {% else %}
+                -
+            {% endif %}
+        </span>
+    </div>
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">Tax Payable</span>
+        <span class="ca-detail-value">
+            {% if draft.tax_payable is not none %}
+                Rs {{ "%.2f"|format(draft.tax_payable) }}
+            {% else %}
+                -
+            {% endif %}
+        </span>
+    </div>
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">Tax Savings</span>
+        <span class="ca-detail-value">
+            {% if draft.savings is not none %}
+                Rs {{ "%.2f"|format(draft.savings) }}
+            {% else %}
+                -
+            {% endif %}
+        </span>
+    </div>
+    {% if draft.ca_notes %}
+    <div class="ca-detail-item ca-detail-wide">
+        <span class="ca-detail-label">CA Notes</span>
+        <span class="ca-detail-value">{{ draft.ca_notes }}</span>
+    </div>
+    {% endif %}
+    {% if draft.ca_reviewed_at %}
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">Reviewed At</span>
+        <span class="ca-detail-value">{{ draft.ca_reviewed_at.strftime('%d %b %Y %H:%M') if draft.ca_reviewed_at else '-' }}</span>
+    </div>
+    {% endif %}
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">Created</span>
+        <span class="ca-detail-value">{{ draft.created_at.strftime('%d %b %Y %H:%M') if draft.created_at else '-' }}</span>
+    </div>
+</div>
+
+<!-- Tax Computation Details -->
+{% if draft.result_data %}
+<section class="ca-section">
+    <div class="ca-section-header">
+        <h2>Tax Computation</h2>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+        <!-- Old Regime -->
+        {% set old = draft.result_data.get('old_regime', {}) %}
+        <div class="ca-card">
+            <h3>Old Regime {{ '(Recommended)' if draft.recommended_regime == 'old' else '' }}</h3>
+            <table class="ca-table">
+                <tbody>
+                    <tr><td>Gross Total Income</td><td class="ca-text-right">{{ "%.2f"|format(old.get('gross_total_income', 0)) }}</td></tr>
+                    <tr><td>Total Deductions</td><td class="ca-text-right">{{ "%.2f"|format(old.get('total_deductions', 0)) }}</td></tr>
+                    <tr><td>Taxable Income</td><td class="ca-text-right">{{ "%.2f"|format(old.get('taxable_income', 0)) }}</td></tr>
+                    <tr><td>Tax on Income</td><td class="ca-text-right">{{ "%.2f"|format(old.get('tax_on_income', 0)) }}</td></tr>
+                    <tr><td>Rebate 87A</td><td class="ca-text-right">{{ "%.2f"|format(old.get('rebate_87a', 0)) }}</td></tr>
+                    <tr><td>Surcharge</td><td class="ca-text-right">{{ "%.2f"|format(old.get('surcharge', 0)) }}</td></tr>
+                    <tr><td>Health Cess</td><td class="ca-text-right">{{ "%.2f"|format(old.get('health_cess', 0)) }}</td></tr>
+                    <tr><td><strong>Total Tax Liability</strong></td><td class="ca-text-right"><strong>{{ "%.2f"|format(old.get('total_tax_liability', 0)) }}</strong></td></tr>
+                    <tr><td>Taxes Paid</td><td class="ca-text-right">{{ "%.2f"|format(old.get('taxes_paid', 0)) }}</td></tr>
+                    <tr><td><strong>Tax Payable</strong></td><td class="ca-text-right"><strong>{{ "%.2f"|format(old.get('tax_payable', 0)) }}</strong></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- New Regime -->
+        {% set new = draft.result_data.get('new_regime', {}) %}
+        <div class="ca-card">
+            <h3>New Regime {{ '(Recommended)' if draft.recommended_regime == 'new' else '' }}</h3>
+            <table class="ca-table">
+                <tbody>
+                    <tr><td>Gross Total Income</td><td class="ca-text-right">{{ "%.2f"|format(new.get('gross_total_income', 0)) }}</td></tr>
+                    <tr><td>Total Deductions</td><td class="ca-text-right">{{ "%.2f"|format(new.get('total_deductions', 0)) }}</td></tr>
+                    <tr><td>Taxable Income</td><td class="ca-text-right">{{ "%.2f"|format(new.get('taxable_income', 0)) }}</td></tr>
+                    <tr><td>Tax on Income</td><td class="ca-text-right">{{ "%.2f"|format(new.get('tax_on_income', 0)) }}</td></tr>
+                    <tr><td>Rebate 87A</td><td class="ca-text-right">{{ "%.2f"|format(new.get('rebate_87a', 0)) }}</td></tr>
+                    <tr><td>Surcharge</td><td class="ca-text-right">{{ "%.2f"|format(new.get('surcharge', 0)) }}</td></tr>
+                    <tr><td>Health Cess</td><td class="ca-text-right">{{ "%.2f"|format(new.get('health_cess', 0)) }}</td></tr>
+                    <tr><td><strong>Total Tax Liability</strong></td><td class="ca-text-right"><strong>{{ "%.2f"|format(new.get('total_tax_liability', 0)) }}</strong></td></tr>
+                    <tr><td>Taxes Paid</td><td class="ca-text-right">{{ "%.2f"|format(new.get('taxes_paid', 0)) }}</td></tr>
+                    <tr><td><strong>Tax Payable</strong></td><td class="ca-text-right"><strong>{{ "%.2f"|format(new.get('tax_payable', 0)) }}</strong></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Income & Deductions (from input data) -->
+{% if draft.input_data %}
+<section class="ca-section">
+    <div class="ca-section-header">
+        <h2>Input Details</h2>
+    </div>
+    <div class="ca-detail-grid">
+        {% for key, val in draft.input_data.items() %}
+        <div class="ca-detail-item">
+            <span class="ca-detail-label">{{ key | replace('_', ' ') | title }}</span>
+            <span class="ca-detail-value">
+                {% if val is number %}
+                    {{ "%.2f"|format(val) }}
+                {% else %}
+                    {{ val or '-' }}
+                {% endif %}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Mismatches -->
+{% if draft.mismatch_data and draft.mismatch_data.get('mismatches') %}
+<section class="ca-section">
+    <div class="ca-section-header">
+        <h2>Mismatches ({{ draft.mismatch_data.get('total_critical', 0) }} Critical, {{ draft.mismatch_data.get('total_warnings', 0) }} Warnings)</h2>
+    </div>
+    <table class="ca-table">
+        <thead>
+            <tr>
+                <th>Field</th>
+                <th>Source A</th>
+                <th>Source B</th>
+                <th class="ca-text-right">Value A</th>
+                <th class="ca-text-right">Value B</th>
+                <th class="ca-text-right">Difference</th>
+                <th>Severity</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in draft.mismatch_data.get('mismatches', []) %}
+            <tr>
+                <td>{{ m.field | replace('_', ' ') | title }}</td>
+                <td>{{ m.source_a | upper }}</td>
+                <td>{{ m.source_b | upper }}</td>
+                <td class="ca-text-right">{{ m.value_a }}</td>
+                <td class="ca-text-right">{{ m.value_b }}</td>
+                <td class="ca-text-right">{{ m.difference }}</td>
+                <td>
+                    <span class="ca-badge {{ 'ca-badge-overdue' if m.severity == 'critical' else 'ca-badge-upcoming' }}">
+                        {{ m.severity | title }}
+                    </span>
+                </td>
+                <td style="max-width:200px; font-size:0.85em;">{{ m.suggested_action }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endif %}
+
+<!-- Document Checklist -->
+{% if draft.checklist_data and draft.checklist_data.get('items') %}
+<section class="ca-section">
+    <div class="ca-section-header">
+        <h2>Document Checklist</h2>
+    </div>
+    <table class="ca-table">
+        <thead>
+            <tr>
+                <th>Document</th>
+                <th>Reason</th>
+                <th>Priority</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in draft.checklist_data.get('items', []) %}
+            <tr>
+                <td><strong>{{ item.document }}</strong></td>
+                <td>{{ item.reason }}</td>
+                <td>
+                    <span class="ca-badge {{ 'ca-badge-overdue' if item.priority == 'required' else 'ca-badge-upcoming' if item.priority == 'recommended' else '' }}">
+                        {{ item.priority | title }}
+                    </span>
+                </td>
+                <td>
+                    {% if item.status == 'uploaded' %}
+                        <span style="color:green;">Uploaded</span>
+                    {% elif item.status == 'missing' %}
+                        <span style="color:red;">Missing</span>
+                    {% else %}
+                        {{ item.status | title }}
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endif %}
+
+<!-- Linked GST Filings -->
+{% if draft.linked_gst_filing_ids %}
+<section class="ca-section">
+    <div class="ca-section-header">
+        <h2>Linked GST Filings</h2>
+    </div>
+    <ul style="list-style:none; padding:0;">
+        {% for fid in draft.linked_gst_filing_ids %}
+        <li style="padding:8px 0; border-bottom:1px solid #eee;">
+            Filing ID: <span class="ca-mono">{{ fid }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
+
+<!-- Actions -->
+{% if 'ca_approved' in draft.allowed_transitions or 'changes_requested' in draft.allowed_transitions %}
+<section class="ca-section">
+    <div class="ca-section-header">
+        <h2>Review Actions</h2>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+        {% if 'ca_approved' in draft.allowed_transitions %}
+        <div class="ca-card">
+            <h3>Approve</h3>
+            <form action="/ca/itr-reviews/{{ draft.id }}/approve" method="post">
+                <div style="margin-bottom:12px;">
+                    <label class="ca-detail-label">Notes (optional)</label>
+                    <textarea name="ca_notes" rows="3" class="ca-input" placeholder="Optional approval notes..."></textarea>
+                </div>
+                <button type="submit" class="ca-btn" onclick="return confirm('Approve this ITR draft? The user will be notified.');">
+                    Approve
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        {% if 'changes_requested' in draft.allowed_transitions %}
+        <div class="ca-card">
+            <h3>Request Changes</h3>
+            <form action="/ca/itr-reviews/{{ draft.id }}/request-changes" method="post">
+                <div style="margin-bottom:12px;">
+                    <label class="ca-detail-label">Notes (required)</label>
+                    <textarea name="ca_notes" rows="3" class="ca-input" required placeholder="Describe what needs to be changed..."></textarea>
+                </div>
+                <button type="submit" class="ca-btn ca-btn-danger" onclick="return confirm('Request changes? The user will be notified.');">
+                    Request Changes
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
+{% endblock %}

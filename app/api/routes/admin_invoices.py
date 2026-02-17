@@ -1,10 +1,10 @@
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import require_admin_token
 from app.api.routes.schemas_admin import InvoiceCreate, InvoiceOut
-from app.core.config import settings
 from app.core.db import get_db
 from app.infrastructure.db.models import User
 from app.infrastructure.db.repositories import InvoiceRepository
@@ -12,26 +12,8 @@ from app.infrastructure.db.repositories import InvoiceRepository
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
-async def verify_admin_key(x_admin_key: str = Header(None)):
-    """
-    Very simple header-based admin auth.
-    In production, replace with proper auth (JWT / OAuth / etc.).
-    """
-    if not settings.ADMIN_API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="ADMIN_API_KEY not configured on server.",
-        )
-    if x_admin_key != settings.ADMIN_API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid admin key.",
-        )
-    return True
-
-
 @router.post(
-    "/invoices", response_model=InvoiceOut, dependencies=[Depends(verify_admin_key)]
+    "/invoices", response_model=InvoiceOut, dependencies=[Depends(require_admin_token)]
 )
 async def create_invoice(
     payload: InvoiceCreate,
@@ -69,7 +51,7 @@ async def create_invoice(
 @router.get(
     "/invoices/{whatsapp_number}",
     response_model=list[InvoiceOut],
-    dependencies=[Depends(verify_admin_key)],
+    dependencies=[Depends(require_admin_token)],
 )
 async def list_invoices(
     whatsapp_number: str,

@@ -1,0 +1,85 @@
+{% extends "ca/base.html" %}
+{% block content %}
+
+<div class="ca-stats-grid">
+    <div class="ca-stat-card {{ 'ca-stat-danger' if pending_count > 0 else '' }}">
+        <div class="ca-stat-value">{{ pending_count }}</div>
+        <div class="ca-stat-label">Pending Reviews</div>
+    </div>
+    <div class="ca-stat-card">
+        <div class="ca-stat-value">{{ drafts | length }}</div>
+        <div class="ca-stat-label">Total ITR Drafts</div>
+    </div>
+</div>
+
+<!-- Status Filter -->
+<section class="ca-section">
+    <div class="ca-section-header">
+        <h2>ITR Drafts</h2>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <form method="get" action="/ca/itr-reviews" style="display:flex; gap:8px; margin:0;">
+                <select name="status" class="ca-select" onchange="this.form.submit()">
+                    <option value="">All Statuses</option>
+                    <option value="pending_ca_review" {{ 'selected' if filter_status == 'pending_ca_review' else '' }}>Pending Review</option>
+                    <option value="ca_approved" {{ 'selected' if filter_status == 'ca_approved' else '' }}>Approved</option>
+                    <option value="changes_requested" {{ 'selected' if filter_status == 'changes_requested' else '' }}>Changes Requested</option>
+                    <option value="draft" {{ 'selected' if filter_status == 'draft' else '' }}>Draft</option>
+                    <option value="user_confirmed" {{ 'selected' if filter_status == 'user_confirmed' else '' }}>User Confirmed</option>
+                    <option value="filed" {{ 'selected' if filter_status == 'filed' else '' }}>Filed</option>
+                </select>
+            </form>
+        </div>
+    </div>
+
+    {% if drafts %}
+    <table class="ca-table">
+        <thead>
+            <tr>
+                <th>Client</th>
+                <th>Form Type</th>
+                <th>AY</th>
+                <th>PAN</th>
+                <th>Tax Payable</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in drafts %}
+            <tr>
+                <td><strong>{{ d.user_name }}</strong></td>
+                <td>{{ d.form_type }}</td>
+                <td>{{ d.assessment_year }}</td>
+                <td class="ca-mono">{{ d.pan or '-' }}</td>
+                <td class="ca-text-right">
+                    {% if d.tax_payable is not none %}
+                        {{ "%.2f"|format(d.tax_payable) }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="ca-badge ca-badge-{{ d.status }}">
+                        {{ d.status | replace('_', ' ') | title }}
+                    </span>
+                </td>
+                <td>{{ d.created_at.strftime('%d %b %Y') if d.created_at else '-' }}</td>
+                <td>
+                    <a href="/ca/itr-reviews/{{ d.id }}" class="ca-btn ca-btn-sm">
+                        {% if d.status == 'pending_ca_review' %}Review{% else %}View{% endif %}
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="ca-empty-state">
+        <h3>No ITR drafts found</h3>
+        <p>ITR drafts will appear here when your clients submit their returns for review via WhatsApp.</p>
+    </div>
+    {% endif %}
+</section>
+
+{% endblock %}

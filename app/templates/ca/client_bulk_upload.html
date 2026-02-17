@@ -1,0 +1,48 @@
+{% extends "ca/base.html" %}
+{% block content %}
+
+{% if error %}
+<div class="ca-alert ca-alert-error">{{ error }}</div>
+{% endif %}
+
+<div class="ca-form-section">
+    <h3>Upload CSV File</h3>
+    <p>Upload a CSV file to add multiple clients at once. <a href="/ca/clients/bulk-upload/template">Download template CSV</a></p>
+
+    <form method="post" action="/ca/clients/bulk-upload" enctype="multipart/form-data" class="ca-form">
+        <div class="ca-form-group">
+            <label for="file">CSV File *</label>
+            <input type="file" id="file" name="file" accept=".csv,text/csv" required>
+            <small class="ca-help-text">Max 500 rows per upload. UTF-8 encoding.</small>
+        </div>
+        <div class="ca-form-actions">
+            <button type="submit" class="ca-btn ca-btn-primary">Upload &amp; Process</button>
+            <a href="/ca/clients" class="ca-btn ca-btn-outline">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<div class="ca-form-section">
+    <h3>CSV Format</h3>
+    <p>The CSV must include a header row. Only <strong>name</strong> is required; all other columns are optional.</p>
+
+    <table class="ca-table" style="font-size:13px;">
+        <thead>
+            <tr>
+                <th>Column</th>
+                <th>Required</th>
+                <th>Format / Example</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td><code>name</code></td><td>Yes</td><td>ABC Traders Pvt Ltd</td></tr>
+            <tr><td><code>whatsapp_number</code></td><td>No</td><td>9876543210 or 919876543210 (country code auto-added)</td></tr>
+            <tr><td><code>gstin</code></td><td>No</td><td>22AAAAA0000A1Z5 (15 characters)</td></tr>
+            <tr><td><code>pan</code></td><td>No</td><td>AAAAA0000A (10 characters)</td></tr>
+            <tr><td><code>email</code></td><td>No</td><td>contact@example.com</td></tr>
+            <tr><td><code>business_type</code></td><td>No</td><td>sole_prop, partnership, pvt_ltd, llp, public_ltd, trust, huf</td></tr>
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

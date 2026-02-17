@@ -1,37 +1,91 @@
+# app/infrastructure/external/stt_sarvam.py
+"""
+Sarvam AI Speech-to-Text integration.
+
+Requires environment variables:
+    SARVAM_API_KEY   — your Sarvam API key
+    SARVAM_STT_URL   — Sarvam STT endpoint URL
+                        (e.g. https://api.sarvam.ai/speech-to-text)
+
+Falls back gracefully if not configured — raises RuntimeError so the
+caller (voice_handler.py) can return an appropriate error to the user.
+"""
+
+import base64
+import logging
+
 import httpx
 
 from app.core.config import settings
+
+logger = logging.getLogger("stt_sarvam")
+
+# Language code mapping (our codes → Sarvam codes)
+_LANG_MAP = {
+    "en": "en-IN",
+    "hi": "hi-IN",
+    "gu": "gu-IN",
+    "ta": "ta-IN",
+    "te": "te-IN",
+    "kn": "kn-IN",
+}
 
 
 async def transcribe_audio_sarvam(
     audio_bytes: bytes, language: str | None = None
 ) -> str:
-    """
-    Generic Sarvam STT wrapper.
-    You must set SARVAM_STT_URL + SARVAM_API_KEY in .env.local
-    The exact payload depends on their latest docs; treat this as a template.
+    """Transcribe audio using Sarvam AI STT.
+
+    Parameters
+    ----------
+    audio_bytes : bytes
+        Raw audio data (OGG/WAV/MP3 from WhatsApp).
+    language : str | None
+        ISO-639-1 language hint (e.g. "hi", "en"). Optional.
+
+    Returns
+    -------
+    str
+        Transcribed text.
+
+    Raises
+    ------
+    RuntimeError
+        If Sarvam credentials are not configured.
     """
     if not settings.SARVAM_API_KEY or not settings.SARVAM_STT_URL:
-        raise RuntimeError("Sarvam STT not configured")
+        raise RuntimeError(
+            "Sarvam STT not configured. "
+            "Set SARVAM_API_KEY and SARVAM_STT_URL in your .env file."
+        )
+
+    sarvam_lang = _LANG_MAP.get(language or "", "hi-IN")
 
     headers = {
-        "Authorization": f"Bearer {settings.SARVAM_API_KEY}",
-        "Content-Type": "application/octet-stream",
+        "api-subscription-key": settings.SARVAM_API_KEY,
     }
 
-    # Some STT APIs take params via query or JSON; adapt as per Sarvam's docs
-    params = {}
-    if language:
-        params["language"] = language
+    # Sarvam expects multipart form data with the audio file
+    files = {
+        "file": ("audio.ogg", audio_bytes, "audio/ogg"),
+    }
+    form_data = {
+        "language_code": sarvam_lang,
+        "model": "saarika:v2",
+    }
 
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(
             settings.SARVAM_STT_URL,
             headers=headers,
-            params=params,
-            content=audio_bytes,
+            files=files,
+            data=form_data,
         )
         resp.raise_for_status()
         data = resp.json()
-        # Adjust key according to actual API response
-        return data.get("text") or data.get("transcript") or ""
+
+    # Sarvam API returns {"transcript": "..."} 
+    transcript = data.get("transcript", "")
+    if not transcript:
+        logger.warning("Sarvam STT returned empty transcript: %s", data)
+    return transcript

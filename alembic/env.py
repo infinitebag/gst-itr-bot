@@ -6,7 +6,7 @@ from logging.config import fileConfig
 
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
-from sqlalchemy.orm import context
+from alembic import context
 
 # Alembic Config object (from alembic.ini)
 config = context.config
@@ -25,11 +25,19 @@ if config.config_file_name is not None:
 #
 # If you don't have a single Base yet, create one and make all models inherit from it.
 from app.db.base import Base  # <-- CHANGE if needed
+import app.infrastructure.db.models  # noqa: F401 — registers all models on Base.metadata
 
 target_metadata = Base.metadata
 
 
 def get_database_url() -> str:
+    # Prefer centralized settings; fall back to env var for alembic CLI usage
+    try:
+        from app.core.config import settings as _s
+        if _s.DATABASE_URL:
+            return _s.DATABASE_URL
+    except Exception:
+        pass
     url = os.getenv("DATABASE_URL")
     if not url:
         raise RuntimeError("DATABASE_URL is not set. Use --env-file .env.docker in docker compose.")

@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import time
 from dataclasses import dataclass
 
@@ -8,6 +9,10 @@ import httpx
 from app.core.config import settings
 from app.core.db import AsyncSessionLocal
 from app.infrastructure.db.models import WhatsAppDeadLetter, WhatsAppMessageLog
+
+logger = logging.getLogger("whatsapp_client")
+
+GRAPH_API_VERSION = "v20.0"
 
 # ----------------- CONFIG -----------------
 
@@ -18,8 +23,8 @@ INITIAL_BACKOFF_SECONDS = 1.0
 MIN_SECONDS_BETWEEN_MESSAGES = 0.25  # ~4 messages/sec
 
 # Per-user rate limits
-PER_USER_MAX_PER_MINUTE = 30  # tune as you like
-PER_USER_MAX_PER_DAY = 1000  # tune as you like
+PER_USER_MAX_PER_MINUTE = 30
+PER_USER_MAX_PER_DAY = 1000
 
 
 # ----------------- QUEUE TYPES -----------------
@@ -30,6 +35,10 @@ class OutgoingMessage:
     to: str
     text: str
     attempt: int = 0
+    # For interactive / template messages, store the full API payload.
+    # When ``payload`` is set, ``_send_whatsapp_payload`` is used instead
+    # of the text-only ``_send_whatsapp_http``.
+    payload: dict | None = None
 
 
 _outgoing_queue: "asyncio.Queue[OutgoingMessage]" = asyncio.Queue()
@@ -51,6 +60,7 @@ class UserRateState:
 
 # in-memory map: to_number -> UserRateState
 _user_rate_state: dict[str, UserRateState] = {}
+_user_rate_lock = asyncio.Lock()
 
 
 def _now_ts() -> float:
@@ -89,14 +99,12 @@ def _update_and_check_user_rate(to_number: str) -> bool:
         state.day_window_start = now
         state.day_count = 0
 
-    # Check future counts
     future_minute = state.minute_count + 1
     future_day = state.day_count + 1
 
     if future_minute > PER_USER_MAX_PER_MINUTE or future_day > PER_USER_MAX_PER_DAY:
         return False
 
-    # Apply counts
     state.minute_count = future_minute
     state.day_count = future_day
     return True
@@ -107,34 +115,33 @@ def _update_and_check_user_rate(to_number: str) -> bool:
 
 async def send_whatsapp_text(to_number: str, text: str) -> None:
     """
-    Public function used everywhere in your app.
+    Public function used everywhere in the app.
 
-    Now:
     - Checks per-user rate limits
     - If exceeded -> logs dead-letter and returns
     - Else enqueues message for async sending
     """
-    if not _update_and_check_user_rate(to_number):
-        # Rate limit exceeded, log dead-letter and drop
-        # Rate limit exceeded, log dead-letter and drop
-        reason = "per_user_rate_limit"
-        msg = f"Rate limit exceeded: >{PER_USER_MAX_PER_MINUTE}/minute or >{PER_USER_MAX_PER_DAY}/day"
+    async with _user_rate_lock:
+        rate_ok = _update_and_check_user_rate(to_number)
+    if not rate_ok:
+        error_msg = (
+            f"Rate limit exceeded: >{PER_USER_MAX_PER_MINUTE}/minute "
+            f"or >{PER_USER_MAX_PER_DAY}/day"
+        )
         await _log_dead_letter(
             to_number=to_number,
             text=text,
             failure_reason="per_user_rate_limit",
-            last_error=f"Rate limit exceeded: >{PER_USER_MAX_PER_MINUTE}/minute or >{PER_USER_MAX_PER_DAY}/day",
+            last_error=error_msg,
             retry_count=0,
         )
         await _log_message(
             to_number=to_number,
             text=text,
             status="dropped_rate_limit",
-            error=msg,
+            error=error_msg,
         )
-        print(
-            f"[WhatsAppWorker] Dropping message to {to_number} due to per-user rate limit."
-        )
+        logger.warning("Dropping message to %s due to per-user rate limit.", to_number)
         return
 
     msg = OutgoingMessage(to=to_number, text=text)
@@ -143,16 +150,16 @@ async def send_whatsapp_text(to_number: str, text: str) -> None:
 
 async def start_whatsapp_sender_worker() -> None:
     """
-    Call this once at startup (FastAPI on_event('startup')).
+    Call this once at startup (FastAPI lifespan).
     """
-    print("[WhatsAppWorker] Starting sender worker...")
+    logger.info("Starting sender worker...")
 
     while True:
         msg: OutgoingMessage = await _outgoing_queue.get()
         try:
             await _send_with_retries(msg)
         except Exception as e:
-            print(f"[WhatsAppWorker] Giving up on message to {msg.to}: {e!r}")
+            logger.error("Giving up on message to %s: %r", msg.to, e)
         finally:
             _outgoing_queue.task_done()
 
@@ -165,12 +172,13 @@ async def _send_with_retries(msg: OutgoingMessage) -> None:
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            await _rate_limited_send(msg.to, msg.text)
+            await _rate_limited_send(msg.to, msg.text, payload=msg.payload)
             return
         except Exception as e:
-            print(f"[WhatsAppWorker] Send attempt {attempt} failed for {msg.to}: {e!r}")
+            logger.warning(
+                "Send attempt %d failed for %s: %r", attempt, msg.to, e
+            )
             if attempt == MAX_RETRIES:
-                # All retries failed -> dead-letter
                 await _log_dead_letter(
                     to_number=msg.to,
                     text=msg.text,
@@ -178,18 +186,15 @@ async def _send_with_retries(msg: OutgoingMessage) -> None:
                     last_error=str(e),
                     retry_count=attempt,
                 )
-                print(
-                    f"[WhatsAppWorker] MAX_RETRIES reached, logged dead-letter for {msg.to}"
+                logger.error(
+                    "MAX_RETRIES reached, logged dead-letter for %s", msg.to
                 )
                 return
             await asyncio.sleep(backoff)
             backoff *= 2
 
 
-async def _rate_limited_send(to_number: str, text: str) -> None:
-    """
-    Global rate limiting across all users.
-    """
+async def _rate_limited_send(to_number: str, text: str, *, payload: dict | None = None) -> None:
     global _last_send_ts
 
     async with _send_lock:
@@ -200,7 +205,10 @@ async def _rate_limited_send(to_number: str, text: str) -> None:
 
         _last_send_ts = _now_ts()
 
-        await _send_whatsapp_http(to_number, text)
+        if payload is not None:
+            await _send_whatsapp_payload(to_number, payload)
+        else:
+            await _send_whatsapp_http(to_number, text)
 
 
 async def _send_whatsapp_http(to_number: str, text: str) -> None:
@@ -212,7 +220,10 @@ async def _send_whatsapp_http(to_number: str, text: str) -> None:
             "WhatsApp credentials not configured (PHONE_NUMBER_ID / ACCESS_TOKEN)."
         )
 
-    url = f"https://graph.facebook.com/v17.0/{phone_number_id}/messages"
+    url = (
+        f"https://graph.facebook.com/{GRAPH_API_VERSION}"
+        f"/{phone_number_id}/messages"
+    )
 
     headers = {
         "Authorization": f"Bearer {access_token}",
@@ -235,8 +246,11 @@ async def _send_whatsapp_http(to_number: str, text: str) -> None:
         except Exception:
             data = {"raw": resp.text}
 
-        print(
-            f"❌ WhatsApp send error [{resp.status_code}] to {to_number}: {json.dumps(data)}"
+        logger.error(
+            "WhatsApp send error [%d] to %s: %s",
+            resp.status_code,
+            to_number,
+            json.dumps(data),
         )
         raise RuntimeError(f"WhatsApp API error {resp.status_code}")
     else:
@@ -244,17 +258,247 @@ async def _send_whatsapp_http(to_number: str, text: str) -> None:
             data = resp.json()
         except Exception:
             data = {}
-        print(
-            f"✅ WhatsApp message sent to {to_number} (msg_id={data.get('messages', [{}])[0].get('id')})"
-        )
+        msg_id = data.get("messages", [{}])[0].get("id")
+        logger.info("WhatsApp message sent to %s (msg_id=%s)", to_number, msg_id)
 
-        # NEW: log successful send
         await _log_message(
             to_number=to_number,
             text=text,
             status="sent",
             error=None,
         )
+
+
+async def _send_whatsapp_payload(to_number: str, payload: dict) -> None:
+    """Send an arbitrary WhatsApp Cloud API payload (interactive / template).
+
+    The caller is responsible for building the correct ``payload`` dict;
+    this helper only adds ``messaging_product`` and ``to`` if missing,
+    then POSTs to the Messages endpoint.
+    """
+    phone_number_id = settings.WHATSAPP_PHONE_NUMBER_ID
+    access_token = settings.WHATSAPP_ACCESS_TOKEN
+
+    if not phone_number_id or not access_token:
+        raise RuntimeError(
+            "WhatsApp credentials not configured (PHONE_NUMBER_ID / ACCESS_TOKEN)."
+        )
+
+    url = (
+        f"https://graph.facebook.com/{GRAPH_API_VERSION}"
+        f"/{phone_number_id}/messages"
+    )
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
+
+    # Ensure required top-level fields
+    payload.setdefault("messaging_product", "whatsapp")
+    payload.setdefault("to", to_number)
+
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        resp = await client.post(url, headers=headers, json=payload)
+
+    log_text = json.dumps(payload, ensure_ascii=False)[:500]
+
+    if resp.status_code >= 400:
+        try:
+            data = resp.json()
+        except Exception:
+            data = {"raw": resp.text}
+        logger.error(
+            "WhatsApp payload send error [%d] to %s: %s",
+            resp.status_code,
+            to_number,
+            json.dumps(data),
+        )
+        raise RuntimeError(f"WhatsApp API error {resp.status_code}")
+    else:
+        try:
+            data = resp.json()
+        except Exception:
+            data = {}
+        msg_id = data.get("messages", [{}])[0].get("id")
+        logger.info("WhatsApp payload sent to %s (msg_id=%s)", to_number, msg_id)
+
+        await _log_message(
+            to_number=to_number,
+            text=log_text,
+            status="sent",
+            error=None,
+        )
+
+
+# ----------------- INTERACTIVE / TEMPLATE PUBLIC API -----------------
+
+
+async def send_whatsapp_buttons(
+    to_number: str,
+    body: str,
+    buttons: list[dict],
+    *,
+    header: str | None = None,
+    footer: str | None = None,
+) -> None:
+    """Send an interactive *button* message (max 3 buttons).
+
+    Parameters
+    ----------
+    to_number : str
+        Recipient WhatsApp ID (phone number).
+    body : str
+        Main message body text.
+    buttons : list[dict]
+        Each dict must have ``id`` (≤256 chars) and ``title`` (≤20 chars).
+        Example: ``[{"id": "btn_yes", "title": "✅ Yes"}]``
+    header : str, optional
+        Header text shown above body.
+    footer : str, optional
+        Footer text shown below body.
+    """
+    if len(buttons) > 3:
+        raise ValueError("WhatsApp button messages support a maximum of 3 buttons")
+
+    interactive: dict = {
+        "type": "button",
+        "body": {"text": body},
+        "action": {
+            "buttons": [
+                {"type": "reply", "reply": {"id": btn["id"], "title": btn["title"]}}
+                for btn in buttons
+            ]
+        },
+    }
+    if header:
+        interactive["header"] = {"type": "text", "text": header}
+    if footer:
+        interactive["footer"] = {"text": footer}
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to_number,
+        "type": "interactive",
+        "interactive": interactive,
+    }
+
+    # Rate-limit + enqueue the same way as text messages
+    async with _user_rate_lock:
+        rate_ok = _update_and_check_user_rate(to_number)
+    if not rate_ok:
+        error_msg = f"Rate limit exceeded for interactive button message"
+        await _log_dead_letter(to_number=to_number, text=body, failure_reason="per_user_rate_limit", last_error=error_msg, retry_count=0)
+        logger.warning("Dropping interactive button message to %s due to rate limit.", to_number)
+        return
+
+    msg = OutgoingMessage(to=to_number, text=body, payload=payload)
+    await _outgoing_queue.put(msg)
+
+
+async def send_whatsapp_list(
+    to_number: str,
+    body: str,
+    sections: list[dict],
+    *,
+    button_text: str = "Choose",
+    header: str | None = None,
+    footer: str | None = None,
+) -> None:
+    """Send an interactive *list* message (max 10 rows across ≤10 sections).
+
+    Parameters
+    ----------
+    to_number : str
+        Recipient WhatsApp ID.
+    body : str
+        Main message body text.
+    sections : list[dict]
+        Each section: ``{"title": "...", "rows": [{"id": "...", "title": "...", "description": "..."}]}``
+    button_text : str
+        Text on the list open button (≤20 chars).  Default: "Choose".
+    header : str, optional
+        Header text.
+    footer : str, optional
+        Footer text.
+    """
+    interactive: dict = {
+        "type": "list",
+        "body": {"text": body},
+        "action": {
+            "button": button_text,
+            "sections": sections,
+        },
+    }
+    if header:
+        interactive["header"] = {"type": "text", "text": header}
+    if footer:
+        interactive["footer"] = {"text": footer}
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to_number,
+        "type": "interactive",
+        "interactive": interactive,
+    }
+
+    async with _user_rate_lock:
+        rate_ok = _update_and_check_user_rate(to_number)
+    if not rate_ok:
+        error_msg = f"Rate limit exceeded for interactive list message"
+        await _log_dead_letter(to_number=to_number, text=body, failure_reason="per_user_rate_limit", last_error=error_msg, retry_count=0)
+        logger.warning("Dropping interactive list message to %s due to rate limit.", to_number)
+        return
+
+    msg = OutgoingMessage(to=to_number, text=body, payload=payload)
+    await _outgoing_queue.put(msg)
+
+
+async def send_whatsapp_template(
+    to_number: str,
+    template_name: str,
+    language: str = "en",
+    *,
+    components: list[dict] | None = None,
+) -> None:
+    """Send a WhatsApp *template* message (pre-approved by Meta).
+
+    Parameters
+    ----------
+    to_number : str
+        Recipient WhatsApp ID.
+    template_name : str
+        Registered template name (e.g. ``"filing_reminder"``).
+    language : str
+        Template language code (e.g. ``"en"``, ``"hi"``).
+    components : list[dict], optional
+        Template components for variable substitution.
+        Example: ``[{"type": "body", "parameters": [{"type": "text", "text": "Jan 2025"}]}]``
+    """
+    template: dict = {
+        "name": template_name,
+        "language": {"code": language},
+    }
+    if components:
+        template["components"] = components
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to_number,
+        "type": "template",
+        "template": template,
+    }
+
+    async with _user_rate_lock:
+        rate_ok = _update_and_check_user_rate(to_number)
+    if not rate_ok:
+        error_msg = f"Rate limit exceeded for template message"
+        await _log_dead_letter(to_number=to_number, text=f"[Template: {template_name}]", failure_reason="per_user_rate_limit", last_error=error_msg, retry_count=0)
+        logger.warning("Dropping template message to %s due to rate limit.", to_number)
+        return
+
+    msg = OutgoingMessage(to=to_number, text=f"[Template: {template_name}]", payload=payload)
+    await _outgoing_queue.put(msg)
 
 
 async def _log_dead_letter(
@@ -264,9 +508,6 @@ async def _log_dead_letter(
     last_error: str | None,
     retry_count: int,
 ) -> None:
-    """
-    Persist failed messages into DB so you can inspect / replay later.
-    """
     try:
         async with AsyncSessionLocal() as session:
             dl = WhatsAppDeadLetter(
@@ -279,8 +520,101 @@ async def _log_dead_letter(
             session.add(dl)
             await session.commit()
     except Exception as e:
-        # Don't let DB errors break sending – just log
-        print(f"[WhatsAppWorker] Failed to log dead-letter for {to_number}: {e!r}")
+        logger.error("Failed to log dead-letter for %s: %r", to_number, e)
+
+
+async def send_whatsapp_document(
+    to_number: str,
+    file_bytes: bytes,
+    filename: str,
+    caption: str = "",
+) -> None:
+    """
+    Send a document (PDF, JSON, etc.) to a WhatsApp user.
+
+    Steps:
+    1. Upload the file to WhatsApp Media API.
+    2. Send a document message with the uploaded media ID.
+    """
+    phone_number_id = settings.WHATSAPP_PHONE_NUMBER_ID
+    access_token = settings.WHATSAPP_ACCESS_TOKEN
+
+    if not phone_number_id or not access_token:
+        raise RuntimeError(
+            "WhatsApp credentials not configured (PHONE_NUMBER_ID / ACCESS_TOKEN)."
+        )
+
+    base_url = f"https://graph.facebook.com/{GRAPH_API_VERSION}/{phone_number_id}"
+
+    # Step 1: Upload media
+    upload_url = f"{base_url}/media"
+    headers_upload = {
+        "Authorization": f"Bearer {access_token}",
+    }
+
+    # Determine MIME type from filename
+    if filename.endswith(".pdf"):
+        mime_type = "application/pdf"
+    elif filename.endswith(".json"):
+        mime_type = "application/json"
+    else:
+        mime_type = "application/octet-stream"
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        files = {
+            "file": (filename, file_bytes, mime_type),
+        }
+        data = {
+            "messaging_product": "whatsapp",
+            "type": mime_type,
+        }
+        resp = await client.post(upload_url, headers=headers_upload, files=files, data=data)
+
+    if resp.status_code >= 400:
+        logger.error("WhatsApp media upload failed [%d]: %s", resp.status_code, resp.text)
+        raise RuntimeError(f"WhatsApp media upload error {resp.status_code}")
+
+    media_data = resp.json()
+    media_id = media_data.get("id")
+    if not media_id:
+        raise RuntimeError(f"No media ID in upload response: {media_data}")
+
+    logger.info("Uploaded media %s for %s", media_id, to_number)
+
+    # Step 2: Send document message
+    msg_url = f"{base_url}/messages"
+    headers_msg = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to_number,
+        "type": "document",
+        "document": {
+            "id": media_id,
+            "filename": filename,
+        },
+    }
+    if caption:
+        payload["document"]["caption"] = caption
+
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        resp = await client.post(msg_url, headers=headers_msg, json=payload)
+
+    if resp.status_code >= 400:
+        logger.error("WhatsApp document send error [%d]: %s", resp.status_code, resp.text)
+        raise RuntimeError(f"WhatsApp document send error {resp.status_code}")
+
+    msg_id = resp.json().get("messages", [{}])[0].get("id")
+    logger.info("WhatsApp document sent to %s (msg_id=%s, file=%s)", to_number, msg_id, filename)
+
+    await _log_message(
+        to_number=to_number,
+        text=f"[Document: {filename}] {caption}",
+        status="sent",
+        error=None,
+    )
 
 
 async def _log_message(
@@ -289,9 +623,6 @@ async def _log_message(
     status: str,
     error: str | None = None,
 ) -> None:
-    """
-    Log WhatsApp messages (sent or dropped) for usage stats.
-    """
     try:
         async with AsyncSessionLocal() as session:
             row = WhatsAppMessageLog(
@@ -303,4 +634,4 @@ async def _log_message(
             session.add(row)
             await session.commit()
     except Exception as e:
-        print(f"[WhatsAppWorker] Failed to log message for {to_number}: {e!r}")
+        logger.error("Failed to log message for %s: %r", to_number, e)

@@ -1,8 +1,10 @@
 {% extends "admin/base.html" %}
 {% block content %}
-<h2>CA Client Dashboard</h2>
 
-<table border="1" cellspacing="0" cellpadding="4">
+<p class="section-desc">Overview of all CA client relationships across the platform.</p>
+
+{% if clients %}
+<table class="admin-table">
     <thead>
     <tr>
         <th>Business Name</th>
@@ -15,13 +17,21 @@
     <tbody>
     {% for c in clients %}
         <tr>
-            <td>{{ c.name }}</td>
-            <td>{{ c.gstin }}</td>
-            <td>{{ c.whatsapp_number }}</td>
+            <td><strong>{{ c.name }}</strong></td>
+            <td class="mono">{{ c.gstin or '-' }}</td>
+            <td class="mono">{{ c.whatsapp_number or '-' }}</td>
             <td>{{ c.invoice_count }}</td>
-            <td>{{ c.last_invoice or '-' }}</td>
+            <td class="text-muted">{{ c.last_invoice or '-' }}</td>
         </tr>
     {% endfor %}
     </tbody>
 </table>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">&#128200;</div>
+    <h3>No Client Data</h3>
+    <p>No CA-client relationships have been established yet.</p>
+</div>
+{% endif %}
+
 {% endblock %}

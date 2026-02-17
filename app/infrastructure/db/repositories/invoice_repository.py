@@ -61,6 +61,10 @@ class InvoiceRepository:
         user_id: uuid.UUID,
         parsed: ParsedInvoice,
         raw_text: str | None = None,
+        *,
+        direction: str = "outward",
+        itc_eligible: bool = False,
+        reverse_charge: bool = False,
     ) -> Invoice:
         """
         Create an Invoice row from ParsedInvoice, making sure:
@@ -167,6 +171,9 @@ class InvoiceRepository:
             tax_rate=rate if rate is not None else None,
             supplier_gstin_valid=parsed.supplier_gstin_valid,
             receiver_gstin_valid=parsed.receiver_gstin_valid,
+            direction=direction,
+            itc_eligible=itc_eligible,
+            reverse_charge=reverse_charge,
         )
 
         self.db.add(invoice)
@@ -215,3 +222,48 @@ class InvoiceRepository:
         )
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
+
+    # ---------- monthly compliance helpers ----------
+
+    async def list_for_period_by_direction(
+        self,
+        user_id: uuid.UUID,
+        start: date,
+        end: date,
+        direction: str,
+    ) -> list[Invoice]:
+        """Return invoices filtered by direction ('outward' or 'inward')."""
+        stmt = (
+            select(Invoice)
+            .where(
+                and_(
+                    Invoice.user_id == user_id,
+                    Invoice.invoice_date >= start,
+                    Invoice.invoice_date <= end,
+                    Invoice.direction == direction,
+                )
+            )
+            .order_by(Invoice.invoice_date, Invoice.created_at)
+        )
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def update_match_status(
+        self,
+        invoice_id: uuid.UUID,
+        match_status: str,
+        match_id: uuid.UUID | None = None,
+    ) -> Invoice | None:
+        """Update gstr2b_match_status and gstr2b_match_id after reconciliation."""
+        stmt = select(Invoice).where(Invoice.id == invoice_id)
+        result = await self.db.execute(stmt)
+        invoice = result.scalar_one_or_none()
+        if not invoice:
+            return None
+
+        invoice.gstr2b_match_status = match_status
+        if match_id:
+            invoice.gstr2b_match_id = match_id
+        await self.db.commit()
+        await self.db.refresh(invoice)
+        return invoice

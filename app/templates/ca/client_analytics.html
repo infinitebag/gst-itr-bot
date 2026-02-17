@@ -1,0 +1,138 @@
+{% extends "ca/base.html" %}
+{% block content %}
+
+<!-- Back to client -->
+<div class="ca-breadcrumb">
+    <a href="/ca/clients/{{ client.id }}">{{ client.name }}</a> &rsaquo; Tax Analytics
+</div>
+
+<!-- Period Selector -->
+<form method="get" action="/ca/clients/{{ client.id }}/analytics" class="ca-period-form">
+    <div class="ca-form-row">
+        <div class="ca-form-group">
+            <label for="period_start">From</label>
+            <input type="date" id="period_start" name="period_start" value="{{ period_start }}">
+        </div>
+        <div class="ca-form-group">
+            <label for="period_end">To</label>
+            <input type="date" id="period_end" name="period_end" value="{{ period_end }}">
+        </div>
+        <div class="ca-form-group" style="align-self: flex-end;">
+            <button type="submit" class="ca-btn ca-btn-sm">Apply</button>
+        </div>
+    </div>
+</form>
+
+{% if summary %}
+<!-- Tax Summary -->
+<section class="ca-section">
+    <h2>Tax Summary</h2>
+    <p class="ca-text-muted">{{ invoice_count }} invoices in period {{ period_start }} to {{ period_end }}</p>
+
+    <div class="ca-stats-grid">
+        <div class="ca-stat-card">
+            <div class="ca-stat-value">{{ "%.2f"|format(summary.total_taxable_value) }}</div>
+            <div class="ca-stat-label">Total Taxable Value</div>
+        </div>
+        <div class="ca-stat-card">
+            <div class="ca-stat-value">{{ "%.2f"|format(summary.total_cgst + summary.total_sgst) }}</div>
+            <div class="ca-stat-label">CGST + SGST</div>
+        </div>
+        <div class="ca-stat-card">
+            <div class="ca-stat-value">{{ "%.2f"|format(summary.total_igst) }}</div>
+            <div class="ca-stat-label">IGST</div>
+        </div>
+        <div class="ca-stat-card">
+            <div class="ca-stat-value">{{ "%.2f"|format(summary.total_tax) }}</div>
+            <div class="ca-stat-label">Total Tax</div>
+        </div>
+    </div>
+
+    <div class="ca-detail-grid" style="margin-top: 16px;">
+        <div class="ca-detail-item">
+            <span class="ca-detail-label">B2B Invoices</span>
+            <span class="ca-detail-value">{{ summary.b2b_count }}</span>
+        </div>
+        <div class="ca-detail-item">
+            <span class="ca-detail-label">B2C Invoices</span>
+            <span class="ca-detail-value">{{ summary.b2c_count }}</span>
+        </div>
+        <div class="ca-detail-item">
+            <span class="ca-detail-label">Unique Suppliers</span>
+            <span class="ca-detail-value">{{ summary.unique_suppliers }}</span>
+        </div>
+        <div class="ca-detail-item">
+            <span class="ca-detail-label">Unique Receivers</span>
+            <span class="ca-detail-value">{{ summary.unique_receivers }}</span>
+        </div>
+    </div>
+</section>
+
+<!-- Anomalies -->
+{% if anomalies %}
+<section class="ca-section">
+    <h2>Anomaly Detection</h2>
+
+    {% if anomalies.duplicate_invoice_numbers %}
+    <div class="ca-anomaly-group">
+        <h3 class="ca-anomaly-title ca-text-warning">Duplicate Invoice Numbers ({{ anomalies.duplicate_invoice_numbers | length }})</h3>
+        <ul class="ca-anomaly-list">
+            {% for dup in anomalies.duplicate_invoice_numbers %}
+            <li>Invoice # <strong>{{ dup.invoice_number }}</strong> appears {{ dup.count }} times</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if anomalies.invalid_gstins %}
+    <div class="ca-anomaly-group">
+        <h3 class="ca-anomaly-title ca-text-danger">Invalid GSTINs ({{ anomalies.invalid_gstins | length }})</h3>
+        <ul class="ca-anomaly-list">
+            {% for g in anomalies.invalid_gstins %}
+            <li><span class="ca-mono">{{ g.gstin }}</span> on invoice {{ g.invoice_number or '-' }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if anomalies.high_value_invoices %}
+    <div class="ca-anomaly-group">
+        <h3 class="ca-anomaly-title ca-text-warning">High Value Outliers ({{ anomalies.high_value_invoices | length }})</h3>
+        <ul class="ca-anomaly-list">
+            {% for h in anomalies.high_value_invoices %}
+            <li>Invoice # <strong>{{ h.invoice_number }}</strong> - {{ "%.2f"|format(h.total_amount) }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if anomalies.unusual_tax_rates %}
+    <div class="ca-anomaly-group">
+        <h3 class="ca-anomaly-title ca-text-warning">Unusual Tax Rates ({{ anomalies.unusual_tax_rates | length }})</h3>
+        <ul class="ca-anomaly-list">
+            {% for u in anomalies.unusual_tax_rates %}
+            <li>Invoice # <strong>{{ u.invoice_number }}</strong> has {{ u.tax_rate }}% tax rate</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if not anomalies.duplicate_invoice_numbers and not anomalies.invalid_gstins and not anomalies.high_value_invoices and not anomalies.unusual_tax_rates %}
+    <p class="ca-text-success">No anomalies detected. All invoices look clean.</p>
+    {% endif %}
+</section>
+{% endif %}
+
+{% else %}
+<div class="ca-empty-state">
+    <h3>No invoice data available</h3>
+    <p>Upload invoices via WhatsApp to see tax analytics for this client.</p>
+</div>
+{% endif %}
+
+<div class="ca-form-actions" style="margin-top: 24px;">
+    <a href="/ca/clients/{{ client.id }}/insights" class="ca-btn ca-btn-primary">Get AI Insights</a>
+    <a href="/ca/clients/{{ client.id }}" class="ca-btn ca-btn-outline">Back to Client</a>
+</div>
+
+{% endblock %}

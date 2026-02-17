@@ -29,7 +29,7 @@ async def preview_gstr1(
     repo = InvoiceRepository(db)
     payload = await prepare_gstr1_payload(
         user_id=user_id,
-        gstin=settings.GST_SANDBOX_GSTIN,  # from .env.local
+        gstin=getattr(settings, "GST_SANDBOX_GSTIN", None) or "NA",
         period_start=period_start,
         period_end=period_end,
         repo=repo,

@@ -23,8 +23,8 @@ def setup_logging() -> None:
         "<level>{message}</level>",
         level="INFO",
         colorize=True,
-        backtrace=True,
-        diagnose=True,  # set False in production if too noisy
+        backtrace=False,
+        diagnose=False,
     )
 
     # Redirect stdlib logging to loguru
@@ -46,7 +46,10 @@ def setup_logging() -> None:
                 level, record.getMessage()
             )
 
-    logging.basicConfig(handlers=[InterceptHandler()], level=0)
+    logging.basicConfig(handlers=[InterceptHandler()], level=logging.INFO)
     logging.getLogger("uvicorn").handlers = [InterceptHandler()]
     logging.getLogger("uvicorn.error").handlers = [InterceptHandler()]
     logging.getLogger("uvicorn.access").handlers = [InterceptHandler()]
+    # Quieten noisy libraries
+    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)

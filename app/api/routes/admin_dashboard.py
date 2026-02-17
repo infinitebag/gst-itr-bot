@@ -3,26 +3,21 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, Form, Header, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import require_admin_token, verify_admin_form_token
 from app.core.config import settings
 from app.core.db import get_db
+from app.infrastructure.audit import log_admin_action
 from app.infrastructure.db.models import WhatsAppDeadLetter, WhatsAppMessageLog
 
 templates = Jinja2Templates(directory="app/templates")
 
 router = APIRouter(prefix="/admin/ui", tags=["admin-ui"])
-
-
-async def require_admin_token(x_admin_token: str = Header(None, alias="X-Admin-Token")):
-    if not settings.ADMIN_API_KEY:
-        raise HTTPException(status_code=500, detail="ADMIN_API_KEY not configured")
-    if x_admin_token != settings.ADMIN_API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid admin token")
 
 
 @router.get("/dead-letters")
@@ -59,7 +54,7 @@ async def dead_letters_page(
             "title": "WhatsApp Dead Letters",
             "items": items,
             "count": len(items),
-            "admin_token": settings.ADMIN_API_KEY,  # used in form hidden field
+            "admin_token": "",  # SECURITY: Never expose ADMIN_API_KEY in HTML; use proper CSRF tokens
         },
     )
 
@@ -68,12 +63,12 @@ async def dead_letters_page(
 async def dead_letter_replay_form(
     dl_id: int,
     request: Request,
-    admin_token: str = Form(...),
+    admin_token: str = Form(""),
     db: AsyncSession = Depends(get_db),
 ):
-    # Form-based auth: compare with ADMIN_API_KEY
-    if admin_token != settings.ADMIN_API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid admin token in form")
+    # Form-based auth: timing-safe compare with ADMIN_API_KEY
+    verify_admin_form_token(admin_token, request)
+    log_admin_action("dead_letter_replay", admin_ip=request.client.host if request.client else "", details={"dl_id": dl_id})
 
     # We reuse the JSON admin endpoint logic:
     from app.api.routes.admin_whatsapp import replay_dead_letter  # avoid duplication
@@ -120,10 +115,10 @@ async def usage_page(
         select(
             WhatsAppMessageLog.to_number,
             func.sum(
-                func.case((WhatsAppMessageLog.status == "sent", 1), else_=0)
+                case((WhatsAppMessageLog.status == "sent", 1), else_=0)
             ).label("sent_count"),
             func.sum(
-                func.case(
+                case(
                     (WhatsAppMessageLog.status == "dropped_rate_limit", 1), else_=0
                 )
             ).label("dropped_count"),
@@ -133,7 +128,7 @@ async def usage_page(
         .group_by(WhatsAppMessageLog.to_number)
         .order_by(
             func.sum(
-                func.case((WhatsAppMessageLog.status == "sent", 1), else_=0)
+                case((WhatsAppMessageLog.status == "sent", 1), else_=0)
             ).desc()
         )
         .limit(50)

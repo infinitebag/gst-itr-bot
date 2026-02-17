@@ -1,15 +1,24 @@
 {% extends "admin/base.html" %}
 {% block content %}
-<h2>WhatsApp Dead Letters (latest {{ count }})</h2>
 
-<table border="1" cellspacing="0" cellpadding="4">
+<div class="admin-stats-grid">
+    <div class="admin-stat-card {% if items|length > 0 %}danger{% endif %}">
+        <div class="admin-stat-value">{{ items|length }}</div>
+        <div class="admin-stat-label">Dead Letters (latest {{ count }})</div>
+    </div>
+</div>
+
+<p class="section-desc">Failed WhatsApp messages that could not be delivered. You can replay them to retry delivery.</p>
+
+{% if items %}
+<table class="admin-table">
     <thead>
     <tr>
         <th>ID</th>
-        <th>To</th>
+        <th>To Number</th>
         <th>Reason</th>
-        <th>Retry Count</th>
-        <th>Created At</th>
+        <th>Retries</th>
+        <th>Created</th>
         <th>Preview</th>
         <th>Actions</th>
     </tr>
@@ -17,20 +26,28 @@
     <tbody>
     {% for dl in items %}
         <tr>
-            <td>{{ dl.id }}</td>
-            <td>{{ dl.to_number }}</td>
-            <td>{{ dl.failure_reason }}</td>
+            <td class="mono">{{ dl.id }}</td>
+            <td class="mono">{{ dl.to_number }}</td>
+            <td><span class="badge badge-danger">{{ dl.failure_reason }}</span></td>
             <td>{{ dl.retry_count }}</td>
             <td>{{ dl.created_at }}</td>
-            <td>{{ dl.text[:80] }}{% if dl.text|length > 80 %}...{% endif %}</td>
+            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ dl.text }}">{{ dl.text[:80] }}{% if dl.text|length > 80 %}...{% endif %}</td>
             <td>
-                <form method="post" action="/admin/whatsapp/dead-letters/{{ dl.id }}/replay">
+                <form method="post" action="/admin/ui/dead-letters/{{ dl.id }}/replay" style="display:inline;">
                     <input type="hidden" name="admin_token" value="{{ admin_token }}">
-                    <button type="submit">Replay</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Replay</button>
                 </form>
             </td>
         </tr>
     {% endfor %}
     </tbody>
 </table>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">&#9989;</div>
+    <h3>No Dead Letters</h3>
+    <p>All WhatsApp messages have been delivered successfully.</p>
+</div>
+{% endif %}
+
 {% endblock %}

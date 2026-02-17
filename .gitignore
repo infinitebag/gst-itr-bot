@@ -10,6 +10,7 @@ __pycache__/
 *.pyd
 
 # Env files (secrets)
+.env
 .env.local
 .env.*
 !.env.example
@@ -30,3 +31,6 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+
+# Node modules
+node_modules/

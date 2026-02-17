@@ -1,0 +1,53 @@
+{% extends "ca/base.html" %}
+{% block content %}
+
+<p class="ca-text-muted">Upcoming GST and ITR filing deadlines based on today's date.</p>
+
+{% if deadlines %}
+<table class="ca-table">
+    <thead>
+        <tr>
+            <th>Form</th>
+            <th>Period</th>
+            <th>Due Date</th>
+            <th>Days Remaining</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for d in deadlines %}
+        <tr class="ca-deadline-row ca-deadline-{{ d.status }}">
+            <td><strong>{{ d.form_name }}</strong></td>
+            <td>{{ d.period }}</td>
+            <td>{{ d.due_date.isoformat() }}</td>
+            <td>
+                {% if d.days_remaining < 0 %}
+                {{ d.days_remaining * -1 }} days overdue
+                {% elif d.days_remaining == 0 %}
+                Due today
+                {% else %}
+                {{ d.days_remaining }} days
+                {% endif %}
+            </td>
+            <td>
+                <span class="ca-badge ca-badge-{{ d.status }}">{{ d.status | replace('_', ' ') | title }}</span>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="ca-deadline-legend">
+    <span class="ca-badge ca-badge-overdue">Overdue</span>
+    <span class="ca-badge ca-badge-due_soon">Due Soon (within 7 days)</span>
+    <span class="ca-badge ca-badge-upcoming">Upcoming</span>
+</div>
+
+{% else %}
+<div class="ca-empty-state">
+    <h3>No deadlines calculated</h3>
+    <p>Filing deadline information is unavailable at this time.</p>
+</div>
+{% endif %}
+
+{% endblock %}

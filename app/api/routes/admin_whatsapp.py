@@ -2,11 +2,11 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.api.deps import require_admin_token
 from app.core.db import get_db
 from app.infrastructure.db.models import WhatsAppDeadLetter
 from app.infrastructure.external.whatsapp_client import send_whatsapp_text
@@ -14,27 +14,10 @@ from app.infrastructure.external.whatsapp_client import send_whatsapp_text
 router = APIRouter(prefix="/admin/whatsapp", tags=["admin-whatsapp"])
 
 
-# --------- SIMPLE ADMIN AUTH ---------
-
-
-async def require_admin(x_admin_token: str = Header(..., alias="X-Admin-Token")):
-    """
-    Simple header-based admin check.
-    Send: X-Admin-Token: <ADMIN_API_KEY from .env.local>
-    """
-    if not settings.ADMIN_API_KEY:
-        raise HTTPException(
-            status_code=500, detail="ADMIN_API_KEY is not configured on server"
-        )
-
-    if x_admin_token != settings.ADMIN_API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid admin token")
-
-
 # --------- ENDPOINTS ---------
 
 
-@router.get("/dead-letters", dependencies=[Depends(require_admin)])
+@router.get("/dead-letters", dependencies=[Depends(require_admin_token)])
 async def list_dead_letters(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
@@ -75,7 +58,7 @@ async def list_dead_letters(
     }
 
 
-@router.get("/dead-letters/{dl_id}", dependencies=[Depends(require_admin)])
+@router.get("/dead-letters/{dl_id}", dependencies=[Depends(require_admin_token)])
 async def get_dead_letter(
     dl_id: int,
     db: AsyncSession = Depends(get_db),
@@ -101,7 +84,7 @@ async def get_dead_letter(
     }
 
 
-@router.post("/dead-letters/{dl_id}/replay", dependencies=[Depends(require_admin)])
+@router.post("/dead-letters/{dl_id}/replay", dependencies=[Depends(require_admin_token)])
 async def replay_dead_letter(
     dl_id: int,
     db: AsyncSession = Depends(get_db),

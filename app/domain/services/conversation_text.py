@@ -9,10 +9,10 @@ TEXT = {
             "4) Change Language\n\n"
             "Reply with 1/2/3/4\n"
             "At any time:\n"
-            "0 = Main Menu\n"
-            "9 = Back"
+            "MENU = Main Menu\n"
+            "BACK = Go Back"
         ),
-        "ASK_GSTIN": "📄 Please enter your GSTIN\n\nReply 0 for Main Menu",
+        "ASK_GSTIN": "📄 Please enter your GSTIN\n\nType MENU for Main Menu",
         "UPLOAD_INVOICE": "📤 Please upload invoice image / PDF",
         "LANG_SET": "🌐 Language set to English",
         "INVALID": "❌ Invalid input. Try again.",
@@ -25,8 +25,8 @@ TEXT = {
             "2) ITR सेवाएँ\n"
             "3) इनवॉइस अपलोड करें (OCR)\n"
             "4) भाषा बदलें\n\n"
-            "0 = मुख्य मेनू\n"
-            "9 = पीछे जाएँ"
+            "MENU = मुख्य मेनू\n"
+            "BACK = पीछे जाएँ"
         ),
         "ASK_GSTIN": "📄 कृपया GSTIN दर्ज करें",
         "UPLOAD_INVOICE": "📤 कृपया इनवॉइस अपलोड करें",

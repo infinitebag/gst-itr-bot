@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title or "CA Dashboard" }}</title>
+    <link rel="stylesheet" href="/static/admin.css">
+</head>
+<body class="ca-layout">
+    <aside class="ca-sidebar">
+        <div class="ca-sidebar-header">
+            <h2>GST/ITR Bot</h2>
+            <p class="ca-name">{{ ca.name if ca else '' }}</p>
+        </div>
+        <nav class="ca-nav">
+            <a href="/ca/dashboard" class="ca-nav-item">Dashboard</a>
+            <a href="/ca/clients" class="ca-nav-item">Clients</a>
+            <a href="/ca/clients/new" class="ca-nav-item">+ Add Client</a>
+            <a href="/ca/itr-reviews" class="ca-nav-item">ITR Reviews</a>
+            <a href="/ca/gst-reviews" class="ca-nav-item">GST Reviews</a>
+            <a href="/ca/deadlines" class="ca-nav-item">Filing Deadlines</a>
+        </nav>
+        <div class="ca-sidebar-footer">
+            <form action="/ca/auth/logout" method="post" style="margin:0;">
+                <button type="submit" class="ca-logout-btn">Logout</button>
+            </form>
+        </div>
+    </aside>
+
+    <main class="ca-main">
+        <header class="ca-header">
+            <h1>{{ title or "Dashboard" }}</h1>
+        </header>
+        <div class="ca-content">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+</body>
+</html>

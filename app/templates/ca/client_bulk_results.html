@@ -1,0 +1,77 @@
+{% extends "ca/base.html" %}
+{% block content %}
+
+<div class="ca-form-section">
+    <h3>Upload Summary</h3>
+    <p>
+        <strong style="color:#2e7d32;">{{ added | length }}</strong> added,
+        <strong style="color:#e65100;">{{ skipped | length }}</strong> skipped,
+        <strong style="color:#c62828;">{{ failed | length }}</strong> failed
+    </p>
+    <div class="ca-form-actions">
+        <a href="/ca/clients{% if added %}?added={{ added | length }}{% endif %}" class="ca-btn ca-btn-primary">View Client List</a>
+        <a href="/ca/clients/bulk-upload" class="ca-btn ca-btn-outline">Upload More</a>
+    </div>
+</div>
+
+{% if added %}
+<div class="ca-form-section">
+    <h3>Added ({{ added | length }})</h3>
+    <table class="ca-table" style="font-size:13px;">
+        <thead>
+            <tr><th>Row</th><th>Name</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+            {% for a in added %}
+            <tr>
+                <td>{{ a.row }}</td>
+                <td>{{ a.name }}</td>
+                <td><a href="/ca/clients/{{ a.id }}" class="ca-btn ca-btn-xs">View</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% if skipped %}
+<div class="ca-form-section">
+    <h3>Skipped ({{ skipped | length }})</h3>
+    <table class="ca-table" style="font-size:13px;">
+        <thead>
+            <tr><th>Row</th><th>Name</th><th>Reason</th></tr>
+        </thead>
+        <tbody>
+            {% for s in skipped %}
+            <tr>
+                <td>{{ s.row }}</td>
+                <td>{{ s.name }}</td>
+                <td>{{ s.reason }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% if failed %}
+<div class="ca-form-section">
+    <h3>Failed ({{ failed | length }})</h3>
+    <table class="ca-table" style="font-size:13px;">
+        <thead>
+            <tr><th>Row</th><th>Name</th><th>Reason</th></tr>
+        </thead>
+        <tbody>
+            {% for f in failed %}
+            <tr>
+                <td>{{ f.row }}</td>
+                <td>{{ f.name }}</td>
+                <td style="color:#c62828;">{{ f.reason }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% endblock %}

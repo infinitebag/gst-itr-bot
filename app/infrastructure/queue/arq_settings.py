@@ -1,10 +1,13 @@
 # app/infrastructure/queue/arq_settings.py
 
 from arq.connections import RedisSettings
+from arq.cron import cron
 from loguru import logger
 
 from app.core.config import settings
 from app.infrastructure.queue.whatsapp_jobs import send_whatsapp_job
+from app.infrastructure.queue.embedding_jobs import ingest_document_job
+from app.infrastructure.queue.ml_retrain_job import ml_retrain_job
 
 
 class WorkerSettings:
@@ -17,7 +20,12 @@ class WorkerSettings:
     redis_settings = RedisSettings.from_dsn(settings.REDIS_URL)
 
     # Jobs this worker can execute
-    functions = [send_whatsapp_job]
+    functions = [send_whatsapp_job, ingest_document_job, ml_retrain_job]
+
+    # Cron jobs (weekly ML retrain — Sundays at 02:00 UTC)
+    cron_jobs = [
+        cron(ml_retrain_job, weekday={6}, hour={2}, minute={0}),
+    ]
 
     # Optional tuning
     max_jobs = 100

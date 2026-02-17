@@ -1,0 +1,119 @@
+{% extends "ca/base.html" %}
+{% block content %}
+
+<!-- Client Profile Header -->
+<div class="ca-client-header">
+    <div class="ca-client-info">
+        <h2>{{ client.name }}</h2>
+        <span class="ca-badge ca-badge-{{ client.status }}">{{ client.status | title }}</span>
+    </div>
+    <div class="ca-client-actions">
+        <a href="/ca/clients/{{ client.id }}/edit" class="ca-btn ca-btn-sm">Edit</a>
+        <a href="/ca/clients/{{ client.id }}/analytics" class="ca-btn ca-btn-sm">Analytics</a>
+        <a href="/ca/clients/{{ client.id }}/insights" class="ca-btn ca-btn-sm">AI Insights</a>
+        <a href="/ca/clients/{{ client.id }}/itr-filings" class="ca-btn ca-btn-sm">ITR Filings</a>
+        <a href="/ca/clients/{{ client.id }}/invoices.pdf" class="ca-btn ca-btn-sm ca-btn-outline">Export PDF</a>
+        {% if client.status == 'active' %}
+        <form action="/ca/clients/{{ client.id }}/deactivate" method="post" style="display:inline;" onsubmit="return confirm('Deactivate this client?');">
+            <button type="submit" class="ca-btn ca-btn-sm ca-btn-danger">Deactivate</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Client Details Grid -->
+<div class="ca-detail-grid">
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">GSTIN</span>
+        <span class="ca-detail-value ca-mono">{{ client.gstin or '-' }}</span>
+    </div>
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">PAN</span>
+        <span class="ca-detail-value ca-mono">{{ client.pan or '-' }}</span>
+    </div>
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">WhatsApp</span>
+        <span class="ca-detail-value">{{ client.whatsapp_number or '-' }}</span>
+    </div>
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">Email</span>
+        <span class="ca-detail-value">{{ client.email or '-' }}</span>
+    </div>
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">Business Type</span>
+        <span class="ca-detail-value">{{ client.business_type or '-' }}</span>
+    </div>
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">State Code</span>
+        <span class="ca-detail-value">{{ client.state_code or '-' }}</span>
+    </div>
+    {% if client.address %}
+    <div class="ca-detail-item ca-detail-wide">
+        <span class="ca-detail-label">Address</span>
+        <span class="ca-detail-value">{{ client.address }}</span>
+    </div>
+    {% endif %}
+    {% if client.notes %}
+    <div class="ca-detail-item ca-detail-wide">
+        <span class="ca-detail-label">Notes</span>
+        <span class="ca-detail-value">{{ client.notes }}</span>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Invoices -->
+<section class="ca-section">
+    <div class="ca-section-header">
+        <h2>Invoices ({{ invoices | length }})</h2>
+        {% if invoices %}
+        <a href="/ca/clients/{{ client.id }}/invoices.pdf" class="ca-btn ca-btn-sm ca-btn-outline">Download PDF</a>
+        {% endif %}
+    </div>
+
+    {% if invoices %}
+    <table class="ca-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Invoice Number</th>
+                <th>Date</th>
+                <th>Supplier GSTIN</th>
+                <th class="ca-text-right">Taxable Value</th>
+                <th class="ca-text-right">Tax</th>
+                <th class="ca-text-right">Total</th>
+                <th>Rate</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for inv in invoices %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td class="ca-mono">{{ inv.invoice_number or '-' }}</td>
+                <td>{{ inv.invoice_date.isoformat() if inv.invoice_date else '-' }}</td>
+                <td class="ca-mono">{{ inv.supplier_gstin or '-' }}</td>
+                <td class="ca-text-right">{{ "%.2f"|format(inv.taxable_value) if inv.taxable_value else '-' }}</td>
+                <td class="ca-text-right">{{ "%.2f"|format(inv.tax_amount) if inv.tax_amount else '-' }}</td>
+                <td class="ca-text-right"><strong>{{ "%.2f"|format(inv.total_amount) if inv.total_amount else '-' }}</strong></td>
+                <td>{{ "%.1f%%"|format(inv.tax_rate) if inv.tax_rate else '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr class="ca-table-totals">
+                <td colspan="4"><strong>TOTAL</strong></td>
+                <td class="ca-text-right"><strong>{{ "%.2f"|format(invoices | map(attribute='taxable_value') | map('float') | sum) }}</strong></td>
+                <td class="ca-text-right"><strong>{{ "%.2f"|format(invoices | map(attribute='tax_amount') | map('float') | sum) }}</strong></td>
+                <td class="ca-text-right"><strong>{{ "%.2f"|format(invoices | map(attribute='total_amount') | map('float') | sum) }}</strong></td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+    {% else %}
+    <div class="ca-empty-state">
+        <h3>No invoices yet</h3>
+        <p>Invoices will appear here once the client uploads them via WhatsApp.</p>
+    </div>
+    {% endif %}
+</section>
+
+{% endblock %}

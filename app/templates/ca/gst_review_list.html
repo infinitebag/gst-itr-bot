@@ -1,0 +1,87 @@
+{% extends "ca/base.html" %}
+{% block content %}
+
+<div class="ca-stats-grid">
+    <div class="ca-stat-card {{ 'ca-stat-danger' if pending_count > 0 else '' }}">
+        <div class="ca-stat-value">{{ pending_count }}</div>
+        <div class="ca-stat-label">Pending Reviews</div>
+    </div>
+    <div class="ca-stat-card">
+        <div class="ca-stat-value">{{ filings | length }}</div>
+        <div class="ca-stat-label">Total GST Filings</div>
+    </div>
+</div>
+
+<!-- Status Filter -->
+<section class="ca-section">
+    <div class="ca-section-header">
+        <h2>GST Filings</h2>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <form method="get" action="/ca/gst-reviews" style="display:flex; gap:8px; margin:0;">
+                <select name="status" class="ca-select" onchange="this.form.submit()">
+                    <option value="">All Statuses</option>
+                    <option value="pending_ca_review" {{ 'selected' if filter_status == 'pending_ca_review' else '' }}>Pending Review</option>
+                    <option value="ca_approved" {{ 'selected' if filter_status == 'ca_approved' else '' }}>Approved</option>
+                    <option value="changes_requested" {{ 'selected' if filter_status == 'changes_requested' else '' }}>Changes Requested</option>
+                    <option value="submitted" {{ 'selected' if filter_status == 'submitted' else '' }}>Submitted</option>
+                    <option value="acknowledged" {{ 'selected' if filter_status == 'acknowledged' else '' }}>Acknowledged</option>
+                    <option value="error" {{ 'selected' if filter_status == 'error' else '' }}>Error</option>
+                </select>
+            </form>
+        </div>
+    </div>
+
+    {% if filings %}
+    <table class="ca-table">
+        <thead>
+            <tr>
+                <th>Client</th>
+                <th>Form Type</th>
+                <th>GSTIN</th>
+                <th>Period</th>
+                <th>Type</th>
+                <th class="ca-text-right">Invoices</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for f in filings %}
+            <tr>
+                <td><strong>{{ f.user_name }}</strong></td>
+                <td>{{ f.form_type }}</td>
+                <td class="ca-mono">{{ f.gstin or '-' }}</td>
+                <td>{{ f.period or '-' }}</td>
+                <td>
+                    {% if f.is_nil %}
+                        <span class="ca-badge ca-badge-draft">NIL</span>
+                    {% else %}
+                        Regular
+                    {% endif %}
+                </td>
+                <td class="ca-text-right">{{ f.invoice_count }}</td>
+                <td>
+                    <span class="ca-badge ca-badge-{{ f.status }}">
+                        {{ f.status | replace('_', ' ') | title }}
+                    </span>
+                </td>
+                <td>{{ f.created_at.strftime('%d %b %Y') if f.created_at else '-' }}</td>
+                <td>
+                    <a href="/ca/gst-reviews/{{ f.id }}" class="ca-btn ca-btn-sm">
+                        {% if f.status == 'pending_ca_review' %}Review{% else %}View{% endif %}
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="ca-empty-state">
+        <h3>No GST filings found</h3>
+        <p>GST filings will appear here when your clients submit their returns for review via WhatsApp.</p>
+    </div>
+    {% endif %}
+</section>
+
+{% endblock %}

@@ -1,31 +1,24 @@
 from io import BytesIO
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.api.deps import require_admin_token
 from app.core.db import get_db
 from app.infrastructure.db.models import Invoice, User
 
 router = APIRouter(prefix="/admin/invoices", tags=["admin-invoices"])
 
 
-async def require_admin(x_admin_token: str = Header(None, alias="X-Admin-Token")):
-    if not settings.ADMIN_API_KEY:
-        raise HTTPException(status_code=500, detail="ADMIN_API_KEY not configured")
-    if x_admin_token != settings.ADMIN_API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid admin token")
-
-
 @router.get("/{invoice_id}/summary.pdf")
 async def invoice_summary_pdf(
     invoice_id: int,
     db: AsyncSession = Depends(get_db),
-    _: None = Depends(require_admin),
+    _: None = Depends(require_admin_token),
 ):
     stmt = select(Invoice).where(Invoice.id == invoice_id)
     result = await db.execute(stmt)

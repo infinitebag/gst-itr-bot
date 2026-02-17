@@ -2,62 +2,86 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, master ]
+    branches: [main]
 
 jobs:
-  tests:
+  lint:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          pip install ruff black
+      - name: Lint with ruff
+        run: ruff check app/ tests/
+      - name: Check formatting
+        run: black --check app/ tests/
 
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
     services:
       postgres:
-        image: postgres:15
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gst_itr_db_test
         ports:
           - 5432:5432
-        env:
-          POSTGRES_USER: gstuser
-          POSTGRES_PASSWORD: gstpass
-          POSTGRES_DB: gstdb
         options: >-
-          --health-cmd="pg_isready -U gstuser -d gstdb"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
       redis:
-        image: redis:7
+        image: redis:7-alpine
         ports:
           - 6379:6379
         options: >-
-          --health-cmd="redis-cli ping || exit 1"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
-    env:
-      DATABASE_URL: postgresql+asyncpg://gstuser:gstpass@localhost:5432/gstdb
-      REDIS_URL: redis://localhost:6379/0
-      ENV: test
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install Poetry
+      - name: Install system dependencies
         run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr libtesseract-dev
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
-          poetry install --no-interaction --no-root
+          pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          pip install pytest-cov pytest-asyncio
 
       - name: Run tests
+        env:
+          ENV: test
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/gst_itr_db_test
+          REDIS_URL: redis://localhost:6379/0
+          ADMIN_API_KEY: test_admin_key
+          CA_JWT_SECRET: test-jwt-secret-for-ci
+          USER_JWT_SECRET: test-user-jwt-for-ci
+          OPENAI_API_KEY: ""
         run: |
-          poetry run pytest
+          python -m pytest tests/ -v --tb=short --cov=app --cov-report=term-missing
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build --target production -t gst-itr-bot:ci .

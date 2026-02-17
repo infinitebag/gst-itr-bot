@@ -1,0 +1,174 @@
+{% extends "admin/base.html" %}
+{% block content %}
+<style>
+    /* Scoped dark theme for health dashboard */
+    .health-wrap {
+        background: #0f172a;
+        color: #e2e8f0;
+        border-radius: 10px;
+        padding: 24px;
+        margin: -4px;
+    }
+
+    .health-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .health-header h2 { font-size: 22px; font-weight: 600; margin: 0; color: #f1f5f9; }
+    .health-header .meta { text-align: right; font-size: 13px; color: #94a3b8; }
+
+    .overall-badge {
+        display: inline-block; padding: 6px 16px; border-radius: 20px;
+        font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .status-healthy { background: #065f46; color: #6ee7b7; }
+    .status-degraded { background: #78350f; color: #fbbf24; }
+    .status-down { background: #7f1d1d; color: #fca5a5; }
+    .status-not_configured { background: #374151; color: #9ca3af; }
+
+    .health-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .health-card {
+        background: #1e293b; border-radius: 12px; padding: 20px;
+        border: 1px solid #334155; transition: border-color 0.2s;
+    }
+    .health-card:hover { border-color: #475569; }
+    .health-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .health-card-title { font-size: 16px; font-weight: 600; }
+    .health-card-badge { font-size: 11px; padding: 3px 10px; border-radius: 12px; font-weight: 500; }
+    .health-card-body { font-size: 13px; color: #94a3b8; }
+    .health-card-body .detail { margin-top: 6px; }
+    .health-card-body .label { color: #64748b; }
+    .health-card-body .value { color: #cbd5e1; font-weight: 500; }
+    .latency { font-size: 12px; color: #64748b; margin-top: 8px; }
+
+    .health-stats-section { margin-top: 32px; }
+    .health-stats-section h3 { font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #f1f5f9; }
+    .health-stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+    .health-stat-card {
+        background: #1e293b; border-radius: 10px; padding: 16px; text-align: center;
+        border: 1px solid #334155;
+    }
+    .health-stat-value { font-size: 28px; font-weight: 700; color: #f1f5f9; }
+    .health-stat-label { font-size: 12px; color: #64748b; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .msg-stats { margin-top: 24px; }
+    .msg-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+    .msg-bar .chip {
+        padding: 4px 12px; border-radius: 8px; font-size: 13px; font-weight: 500;
+    }
+    .chip-sent { background: #065f46; color: #6ee7b7; }
+    .chip-dropped { background: #78350f; color: #fbbf24; }
+    .chip-failed { background: #7f1d1d; color: #fca5a5; }
+
+    .refresh-bar {
+        display: flex; align-items: center; gap: 12px; margin-top: 24px;
+        padding: 12px 16px; background: #1e293b; border-radius: 10px;
+        border: 1px solid #334155; font-size: 13px; color: #94a3b8;
+    }
+    .refresh-bar button {
+        background: #3b82f6; color: white; border: none; padding: 6px 16px;
+        border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500;
+    }
+    .refresh-bar button:hover { background: #2563eb; }
+    .spinner { display: none; width: 16px; height: 16px; border: 2px solid #475569; border-top: 2px solid #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<div class="health-wrap">
+    <div class="health-header">
+        <div>
+            <h2>System Health</h2>
+            <span class="overall-badge status-{{ health.status }}" style="margin-top:8px;">{{ health.status }}</span>
+        </div>
+        <div class="meta">
+            <div>Environment: <strong>{{ health.environment }}</strong></div>
+            <div>Uptime: <strong>{{ health.uptime_human }}</strong></div>
+            <div>Python: {{ health.python_version }} | v{{ health.version }}</div>
+            <div style="margin-top:4px; font-size:11px;">{{ health.timestamp }}</div>
+        </div>
+    </div>
+
+    <div class="health-grid">
+        {% for c in health.components %}
+        <div class="health-card">
+            <div class="health-card-header">
+                <span class="health-card-title">{{ c.name }}</span>
+                <span class="health-card-badge status-{{ c.status }}">{{ c.status }}</span>
+            </div>
+            <div class="health-card-body">
+                <div>{{ c.message }}</div>
+                {% if c.latency_ms > 0 %}
+                <div class="latency">Latency: {{ c.latency_ms }}ms</div>
+                {% endif %}
+                {% for key, val in c.details.items() %}
+                <div class="detail">
+                    <span class="label">{{ key }}:</span>
+                    <span class="value">{{ val }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if health.stats %}
+    <div class="health-stats-section">
+        <h3>Database Stats</h3>
+        <div class="health-stats-grid">
+            {% for table, count in health.stats.items() %}
+            {% if table != 'messages_24h' and table != 'error' %}
+            <div class="health-stat-card">
+                <div class="health-stat-value">{{ count }}</div>
+                <div class="health-stat-label">{{ table | replace("_", " ") }}</div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+
+        {% if health.stats.messages_24h %}
+        <div class="msg-stats">
+            <h3>Messages (Last 24h)</h3>
+            <div class="msg-bar">
+                {% for status, count in health.stats.messages_24h.items() %}
+                <span class="chip chip-{{ status }}">{{ status }}: {{ count }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="refresh-bar">
+        <button onclick="refreshDashboard()">Refresh Now</button>
+        <div class="spinner" id="spinner"></div>
+        <span>Auto-refreshes every <strong>30 seconds</strong></span>
+        <span style="margin-left:auto;" id="last-refresh">Last: just now</span>
+    </div>
+</div>
+
+<script>
+    let refreshInterval;
+
+    async function refreshDashboard() {
+        const spinner = document.getElementById('spinner');
+        spinner.style.display = 'block';
+        try {
+            const resp = await fetch('/admin/system-health/json');
+            if (resp.ok) {
+                window.location.reload();
+            }
+        } catch (e) {
+            console.error('Refresh failed:', e);
+        } finally {
+            spinner.style.display = 'none';
+        }
+    }
+
+    refreshInterval = setInterval(() => {
+        window.location.reload();
+    }, 30000);
+
+    let elapsed = 0;
+    setInterval(() => {
+        elapsed++;
+        document.getElementById('last-refresh').textContent = 'Last: ' + elapsed + 's ago';
+    }, 1000);
+</script>
+{% endblock %}

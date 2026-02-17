@@ -1,0 +1,145 @@
+{% extends "admin/base.html" %}
+{% block content %}
+
+<a href="/admin/ca/list" class="back-link">&larr; Back to CA List</a>
+
+<!-- Profile Card -->
+<div class="profile-grid">
+    <div class="profile-item">
+        <div class="profile-label">Name</div>
+        <div class="profile-value">{{ ca.name }}</div>
+    </div>
+    <div class="profile-item">
+        <div class="profile-label">Email</div>
+        <div class="profile-value mono">{{ ca.email }}</div>
+    </div>
+    <div class="profile-item">
+        <div class="profile-label">Phone</div>
+        <div class="profile-value">{{ ca.phone or '-' }}</div>
+    </div>
+    <div class="profile-item">
+        <div class="profile-label">ICAI Membership #</div>
+        <div class="profile-value mono">{{ ca.membership_number or '-' }}</div>
+    </div>
+    <div class="profile-item">
+        <div class="profile-label">Status</div>
+        <div class="profile-value">
+            {% if ca.approved and ca.active %}
+                <span class="badge badge-success">Approved</span>
+            {% elif not ca.active %}
+                <span class="badge badge-danger">Inactive</span>
+            {% else %}
+                <span class="badge badge-warning">Pending</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="profile-item">
+        <div class="profile-label">Registered</div>
+        <div class="profile-value">{{ ca.created_at.strftime('%d %b %Y') if ca.created_at else '-' }}</div>
+    </div>
+    <div class="profile-item">
+        <div class="profile-label">Last Login</div>
+        <div class="profile-value">{{ ca.last_login.strftime('%d %b %Y, %H:%M') if ca.last_login else 'Never' }}</div>
+    </div>
+    <div class="profile-item">
+        <div class="profile-label">Workload</div>
+        <div class="profile-value">
+            {% if pending_gst > 0 or pending_itr > 0 %}
+                <span class="badge badge-warning">{{ pending_gst }} GST</span>
+                <span class="badge badge-warning">{{ pending_itr }} ITR</span>
+            {% else %}
+                <span class="text-muted">No pending reviews</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Actions -->
+<div class="mb-24">
+    <div class="section-header">
+        <h2>Actions</h2>
+    </div>
+    <div class="inline-form gap-8">
+        {% if not ca.approved and ca.active %}
+            <form method="post" action="/admin/ca/{{ ca.id }}/approve" style="display:inline;">
+                <input type="hidden" name="admin_token" value="{{ admin_token }}">
+                <button type="submit" class="btn btn-success">Approve</button>
+            </form>
+            <form method="post" action="/admin/ca/{{ ca.id }}/reject" style="display:inline;"
+                  onsubmit="return confirm('Reject this CA? This cannot be undone.');">
+                <input type="hidden" name="admin_token" value="{{ admin_token }}">
+                <button type="submit" class="btn btn-danger">Reject</button>
+            </form>
+        {% endif %}
+        {% if ca.approved and ca.active %}
+            <form method="post" action="/admin/ca/{{ ca.id }}/toggle-active" style="display:inline;"
+                  onsubmit="return confirm('Deactivate this CA? They will lose access.');">
+                <input type="hidden" name="admin_token" value="{{ admin_token }}">
+                <button type="submit" class="btn btn-danger">Deactivate</button>
+            </form>
+        {% endif %}
+        {% if not ca.active %}
+            <form method="post" action="/admin/ca/{{ ca.id }}/toggle-active" style="display:inline;">
+                <input type="hidden" name="admin_token" value="{{ admin_token }}">
+                <button type="submit" class="btn btn-success">Reactivate</button>
+            </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Clients -->
+<div class="section-header">
+    <h2>Clients ({{ clients|length }})</h2>
+</div>
+
+{% if clients %}
+<table class="admin-table">
+    <thead>
+    <tr>
+        <th>Name</th>
+        <th>WhatsApp</th>
+        <th>GSTIN</th>
+        <th>PAN</th>
+        <th>Status</th>
+        <th>Transfer</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for client in clients %}
+        <tr>
+            <td><strong>{{ client.name or '-' }}</strong></td>
+            <td class="mono">{{ client.whatsapp_number or '-' }}</td>
+            <td class="mono">{{ client.gstin or '-' }}</td>
+            <td class="mono">{{ client.pan or '-' }}</td>
+            <td>
+                {% if client.status == 'active' %}
+                    <span class="badge badge-success">Active</span>
+                {% else %}
+                    <span class="badge badge-muted">{{ client.status or '-' }}</span>
+                {% endif %}
+            </td>
+            <td>
+                <form method="post" action="/admin/ca/clients/{{ client.id }}/transfer" class="inline-form">
+                    <input type="hidden" name="admin_token" value="{{ admin_token }}">
+                    <select name="to_ca_id" required class="form-select">
+                        <option value="">Transfer to...</option>
+                        {% for other in other_cas %}
+                            <option value="{{ other.id }}">{{ other.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-outline btn-sm">Transfer</button>
+                </form>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">&#128100;</div>
+    <h3>No Clients</h3>
+    <p>This CA has no clients assigned yet.</p>
+</div>
+{% endif %}
+
+{% endblock %}

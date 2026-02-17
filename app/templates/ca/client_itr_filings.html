@@ -1,0 +1,109 @@
+{% extends "ca/base.html" %}
+{% block content %}
+
+<!-- Client Header -->
+<div class="ca-client-header">
+    <div class="ca-client-info">
+        <h2>ITR Filings: {{ client.name }}</h2>
+    </div>
+    <div class="ca-client-actions">
+        <a href="/ca/clients/{{ client.id }}" class="ca-btn ca-btn-sm ca-btn-outline">Back to Client</a>
+    </div>
+</div>
+
+<!-- Client Details -->
+<div class="ca-detail-grid">
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">PAN</span>
+        <span class="ca-detail-value ca-mono">{{ client.pan or '-' }}</span>
+    </div>
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">GSTIN</span>
+        <span class="ca-detail-value ca-mono">{{ client.gstin or '-' }}</span>
+    </div>
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">WhatsApp</span>
+        <span class="ca-detail-value">{{ client.whatsapp_number or '-' }}</span>
+    </div>
+    <div class="ca-detail-item">
+        <span class="ca-detail-label">Total Filings</span>
+        <span class="ca-detail-value">{{ drafts | length }}</span>
+    </div>
+</div>
+
+<!-- ITR Filings Table -->
+<section class="ca-section">
+    <div class="ca-section-header">
+        <h2>Filing History</h2>
+    </div>
+
+    {% if drafts %}
+    <table class="ca-table">
+        <thead>
+            <tr>
+                <th>Form Type</th>
+                <th>AY</th>
+                <th>Regime</th>
+                <th class="ca-text-right">Tax Payable</th>
+                <th class="ca-text-right">Savings</th>
+                <th>Status</th>
+                <th>GST Linked</th>
+                <th>Created</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in drafts %}
+            <tr>
+                <td><strong>{{ d.form_type }}</strong></td>
+                <td>{{ d.assessment_year }}</td>
+                <td>
+                    {% if d.recommended_regime %}
+                        {{ d.recommended_regime | title }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td class="ca-text-right">
+                    {% if d.tax_payable is not none %}
+                        {{ "%.2f"|format(d.tax_payable) }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td class="ca-text-right">
+                    {% if d.savings is not none %}
+                        {{ "%.2f"|format(d.savings) }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="ca-badge ca-badge-{{ d.status }}">
+                        {{ d.status | replace('_', ' ') | title }}
+                    </span>
+                </td>
+                <td>
+                    {% if d.linked_gst_filing_ids %}
+                        {{ d.linked_gst_filing_ids | length }} filing(s)
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>{{ d.created_at.strftime('%d %b %Y') if d.created_at else '-' }}</td>
+                <td>
+                    <a href="/ca/itr-reviews/{{ d.id }}" class="ca-btn ca-btn-sm">View</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="ca-empty-state">
+        <h3>No ITR filings yet</h3>
+        <p>ITR filings will appear here once {{ client.name }} submits their return via WhatsApp.</p>
+    </div>
+    {% endif %}
+</section>
+
+{% endblock %}

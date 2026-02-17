@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CA Registration - GST/ITR Bot</title>
+    <link rel="stylesheet" href="/static/admin.css">
+</head>
+<body class="ca-auth-page">
+    <div class="ca-auth-card">
+        <h1>CA Registration</h1>
+        <p class="ca-auth-subtitle">Create your Chartered Accountant account</p>
+
+        {% if error %}
+        <div class="ca-alert ca-alert-error">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="/ca/auth/register" class="ca-auth-form">
+            <div class="ca-form-group">
+                <label for="name">Full Name *</label>
+                <input type="text" id="name" name="name" required placeholder="CA Rajesh Kumar">
+            </div>
+
+            <div class="ca-form-group">
+                <label for="email">Email *</label>
+                <input type="email" id="email" name="email" required placeholder="rajesh@example.com">
+            </div>
+
+            <div class="ca-form-row">
+                <div class="ca-form-group">
+                    <label for="phone">Phone</label>
+                    <input type="tel" id="phone" name="phone" placeholder="9876543210">
+                </div>
+                <div class="ca-form-group">
+                    <label for="membership_number">ICAI Membership #</label>
+                    <input type="text" id="membership_number" name="membership_number" placeholder="012345">
+                </div>
+            </div>
+
+            <div class="ca-form-group">
+                <label for="password">Password * (min 8 characters)</label>
+                <input type="password" id="password" name="password" required minlength="8" placeholder="Create a strong password">
+            </div>
+
+            <div class="ca-form-group">
+                <label for="confirm_password">Confirm Password *</label>
+                <input type="password" id="confirm_password" name="confirm_password" required minlength="8" placeholder="Re-enter password">
+            </div>
+
+            <button type="submit" class="ca-btn ca-btn-primary ca-btn-full">Create Account</button>
+        </form>
+
+        <p class="ca-auth-footer">
+            Already have an account? <a href="/ca/auth/login">Sign in here</a>
+        </p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,98 @@
+{% extends "admin/base.html" %}
+{% block topbar_actions %}
+    <form method="get" class="inline-form">
+        <label for="status" style="font-size:13px;color:#666;">Filter:</label>
+        <select id="status" name="status" onchange="this.form.submit()" class="form-select">
+            <option value="" {% if not filter_status %}selected{% endif %}>All CAs</option>
+            <option value="approved" {% if filter_status == 'approved' %}selected{% endif %}>Approved</option>
+            <option value="pending" {% if filter_status == 'pending' %}selected{% endif %}>Pending</option>
+            <option value="inactive" {% if filter_status == 'inactive' %}selected{% endif %}>Inactive</option>
+        </select>
+    </form>
+{% endblock %}
+
+{% block content %}
+
+<div class="admin-stats-grid">
+    <div class="admin-stat-card">
+        <div class="admin-stat-value">{{ cas|length }}</div>
+        <div class="admin-stat-label">Total CAs{% if filter_status %} ({{ filter_status }}){% endif %}</div>
+    </div>
+    <div class="admin-stat-card {% if pending_count > 0 %}warning{% endif %}">
+        <div class="admin-stat-value">{{ pending_count }}</div>
+        <div class="admin-stat-label">Pending Approvals</div>
+    </div>
+</div>
+
+{% if cas %}
+<table class="admin-table">
+    <thead>
+    <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Phone</th>
+        <th>ICAI #</th>
+        <th>Clients</th>
+        <th>Pending GST</th>
+        <th>Pending ITR</th>
+        <th>Status</th>
+        <th>Last Login</th>
+        <th>Actions</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for ca in cas %}
+        <tr>
+            <td><strong>{{ ca.name }}</strong></td>
+            <td class="mono">{{ ca.email }}</td>
+            <td>{{ ca.phone or '-' }}</td>
+            <td class="mono">{{ ca.membership_number or '-' }}</td>
+            <td>{{ ca.client_count }}</td>
+            <td>
+                {% if ca.pending_gst > 0 %}
+                    <span class="badge badge-warning">{{ ca.pending_gst }}</span>
+                {% else %}
+                    <span class="text-muted">0</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if ca.pending_itr > 0 %}
+                    <span class="badge badge-warning">{{ ca.pending_itr }}</span>
+                {% else %}
+                    <span class="text-muted">0</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if ca.approved and ca.active %}
+                    <span class="badge badge-success">Approved</span>
+                {% elif not ca.active %}
+                    <span class="badge badge-danger">Inactive</span>
+                {% else %}
+                    <span class="badge badge-warning">Pending</span>
+                {% endif %}
+            </td>
+            <td class="text-muted">{{ ca.last_login[:10] if ca.last_login else '-' }}</td>
+            <td>
+                <div class="inline-form">
+                    <a href="/admin/ca/{{ ca.id }}" class="btn btn-outline btn-xs">View</a>
+                    {% if not ca.approved and ca.active %}
+                        <form method="post" action="/admin/ca/{{ ca.id }}/approve" style="display:inline;">
+                            <input type="hidden" name="admin_token" value="{{ admin_token }}">
+                            <button type="submit" class="btn btn-success btn-xs">Approve</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">&#128101;</div>
+    <h3>No CAs Found</h3>
+    <p>No chartered accountants match the current filter.</p>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - GST/ITR Bot</title>
+    <link rel="stylesheet" href="/static/admin.css">
+</head>
+<body class="ca-auth-page">
+    <div class="ca-auth-card">
+        <h1>Admin Login</h1>
+        <p class="ca-auth-subtitle">Sign in to the admin dashboard</p>
+
+        {% if error %}
+        <div class="ca-alert ca-alert-error">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="/admin/auth/login" class="ca-auth-form">
+            <div class="ca-form-group">
+                <label for="admin_key">Admin API Key</label>
+                <input type="password" id="admin_key" name="admin_key" required placeholder="Enter your admin key" autofocus>
+            </div>
+
+            <button type="submit" class="ca-btn ca-btn-primary ca-btn-full">Sign In</button>
+        </form>
+
+        <p class="ca-auth-footer">
+            <a href="/ca/auth/login">CA Portal</a>
+        </p>
+    </div>
+</body>
+</html>

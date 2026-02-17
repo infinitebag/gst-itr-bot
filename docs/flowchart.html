@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GST/ITR Bot - System Flowchart</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0f2f5; color: #1a1a2e; }
+        .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #fff; padding: 24px 40px; }
+        .header h1 { font-size: 1.6rem; font-weight: 600; }
+        .header p { opacity: 0.7; margin-top: 4px; font-size: 0.9rem; }
+        .tabs { display: flex; gap: 0; background: #16213e; padding: 0 40px; border-bottom: 2px solid #0f3460; position: sticky; top: 0; z-index: 10; }
+        .tab { padding: 12px 24px; color: #a0a0c0; cursor: pointer; font-size: 0.9rem; font-weight: 500;
+               border-bottom: 3px solid transparent; transition: all 0.2s; }
+        .tab:hover { color: #fff; background: rgba(255,255,255,0.05); }
+        .tab.active { color: #e94560; border-bottom-color: #e94560; }
+        .content { padding: 30px 40px; max-width: 1400px; margin: 0 auto; }
+        .diagram-section { display: none; }
+        .diagram-section.active { display: block; }
+        .diagram-card { background: #fff; border-radius: 12px; padding: 24px; margin-bottom: 24px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .diagram-card h2 { font-size: 1.1rem; color: #1a1a2e; margin-bottom: 16px;
+                           padding-bottom: 8px; border-bottom: 2px solid #e94560; }
+        .mermaid-container { display: flex; justify-content: center; overflow-x: auto; padding: 10px 0; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>GST/ITR Bot - Complete System Flowchart</h1>
+    <p>WhatsApp Bot > REST API (Mobile/Web) > CA Review Dashboard > Government Filing</p>
+</div>
+
+<div class="tabs">
+    <div class="tab active" data-tab="overview">Overview</div>
+    <div class="tab" data-tab="gst">GST Flow</div>
+    <div class="tab" data-tab="itr">ITR Flow</div>
+    <div class="tab" data-tab="ca">CA Review</div>
+    <div class="tab" data-tab="api">REST API</div>
+    <div class="tab" data-tab="states">State Transitions</div>
+</div>
+
+<div class="content">
+
+<!-- OVERVIEW -->
+<div id="overview" class="diagram-section active">
+<div class="diagram-card">
+<h2>End-to-End System Overview</h2>
+<div class="mermaid-container" id="chart-overview"></div>
+</div>
+</div>
+
+<!-- GST FLOW -->
+<div id="gst" class="diagram-section">
+<div class="diagram-card">
+<h2>GST Filing Flow - User to CA to MasterGST</h2>
+<div class="mermaid-container" id="chart-gst"></div>
+</div>
+</div>
+
+<!-- ITR FLOW -->
+<div id="itr" class="diagram-section">
+<div class="diagram-card">
+<h2>ITR Filing Flow - User to CA to e-Filing</h2>
+<div class="mermaid-container" id="chart-itr"></div>
+</div>
+</div>
+
+<!-- CA REVIEW -->
+<div id="ca" class="diagram-section">
+<div class="diagram-card">
+<h2>CA Dashboard - Registration, Login and Review Workflow</h2>
+<div class="mermaid-container" id="chart-ca"></div>
+</div>
+</div>
+
+<!-- REST API -->
+<div id="api" class="diagram-section">
+<div class="diagram-card">
+<h2>REST API v1 - Complete Endpoint Map</h2>
+<div class="mermaid-container" id="chart-api-map"></div>
+</div>
+<div class="diagram-card">
+<h2>CA Mobile/Web App - Auth + Client Management Flow</h2>
+<div class="mermaid-container" id="chart-api-ca-flow"></div>
+</div>
+<div class="diagram-card">
+<h2>Admin CA Management - API Flow</h2>
+<div class="mermaid-container" id="chart-api-admin"></div>
+</div>
+</div>
+
+<!-- STATE TRANSITIONS -->
+<div id="states" class="diagram-section">
+<div class="diagram-card">
+<h2>GST Filing State Machine</h2>
+<div class="mermaid-container" id="chart-gst-states"></div>
+</div>
+<div class="diagram-card">
+<h2>ITR Draft State Machine</h2>
+<div class="mermaid-container" id="chart-itr-states"></div>
+</div>
+<div class="diagram-card">
+<h2>Client to CA Assignment</h2>
+<div class="mermaid-container" id="chart-assignment"></div>
+</div>
+</div>
+
+</div>
+
+<script>
+mermaid.initialize({
+    startOnLoad: false,
+    theme: 'default',
+    flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+    securityLevel: 'loose'
+});
+
+const diagrams = {
+    'chart-overview': `flowchart TB
+    subgraph USER["User via WhatsApp"]
+        U1[Send Message]
+        U2[Upload Invoice]
+        U3[Enter Tax Data]
+        U4[Confirm Filing]
+    end
+    subgraph MOBILEAPP["Mobile / Web App"]
+        MA1["CA Login\nBearer JWT"]
+        MA2["Client CRUD\nBulk Upload"]
+        MA3["Review ITR / GST\nApprove / Reject"]
+        MA4["Deadlines\nAnalytics"]
+    end
+    subgraph BOT["WhatsApp Bot - FastAPI"]
+        B1[State Machine]
+        B2["Invoice Parser\nVision + OCR + LLM"]
+        B3["ITR Computation\nITR-1 / ITR-4"]
+        B4["GST Aggregation\nGSTR-3B / GSTR-1"]
+        B5["Draft Creator\ngst_workflow / itr_workflow"]
+    end
+    subgraph RESTAPI["REST API Layer - /api/v1"]
+        R1["CA Auth\nlogin / register / refresh"]
+        R2["CA Clients\nCRUD + bulk CSV"]
+        R3["CA Reviews\nITR + GST JSON"]
+        R4["CA Deadlines\nAdmin CA Mgmt"]
+    end
+    subgraph DB["Database - PostgreSQL"]
+        D1[(Users)]
+        D2[("BusinessClients\nca_id mapping")]
+        D3[("FilingRecords\nGST drafts")]
+        D4[(ITRDrafts)]
+        D5[(CAUsers)]
+    end
+    subgraph CADASH["CA Dashboard - Web"]
+        C1[Login / JWT Auth]
+        C2["Dashboard\nPending Reviews"]
+        C3["GST Review Panel\nApprove / Reject / Submit"]
+        C4["ITR Review Panel\nApprove / Reject"]
+    end
+    subgraph GOV["Government APIs"]
+        G1["MasterGST API\nGSTR-3B / GSTR-1"]
+        G2["Income Tax e-Filing\nITR-1 / ITR-4"]
+    end
+    U1 --> B1
+    U2 --> B2
+    U3 --> B3
+    U3 --> B4
+    U4 --> B5
+    B1 --> B2
+    B1 --> B3
+    B1 --> B4
+    B2 --> B4
+    B5 --> D3
+    B5 --> D4
+    B5 -.-> D2
+    MA1 --> R1
+    MA2 --> R2
+    MA3 --> R3
+    MA4 --> R4
+    R1 --> D5
+    R2 --> D2
+    R3 --> D3
+    R3 --> D4
+    R4 --> D5
+    D2 --> D5
+    D3 --> C3
+    D4 --> C4
+    C1 --> C2
+    C2 --> C3
+    C2 --> C4
+    C3 --> G1
+    C4 --> G2
+    C3 -.-> U1
+    C4 -.-> U1
+    R3 -.-> G1
+    style USER fill:#e3f2fd,stroke:#1565c0,color:#000
+    style MOBILEAPP fill:#e0f7fa,stroke:#00838f,color:#000
+    style BOT fill:#fff3e0,stroke:#e65100,color:#000
+    style RESTAPI fill:#fff8e1,stroke:#f9a825,color:#000
+    style DB fill:#f3e5f5,stroke:#6a1b9a,color:#000
+    style CADASH fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style GOV fill:#fce4ec,stroke:#c62828,color:#000`,
+
+    'chart-gst': `flowchart TD
+    Start(["User sends GST via WhatsApp"]) --> Menu
+    Menu["GST Menu\n1.GSTIN 2.Filing 3.NIL\n4.Upload 5.eInvoice 6.eWayBill"]
+    Menu -->|1| GSTIN["Enter GSTIN\nValidate 15-char"]
+    Menu -->|2| Filing["Filing Menu\n1.GSTR-3B 2.GSTR-1"]
+    Menu -->|3| NIL["NIL Filing\nConfirm period"]
+    Menu -->|4| Upload["Upload Invoices\nImage / PDF"]
+    Upload --> Parse["Parse Invoice\nGPT-4o Vision + OCR"]
+    Parse --> Store["Store in Session"]
+    Store --> Menu
+    Filing -->|1| G3B["Compute GSTR-3B\nOutward + ITC + Net Tax"]
+    Filing -->|2| G1R["Classify GSTR-1\nB2B / B2C / Exempt"]
+    G3B --> Preview["Show Summary\nto User"]
+    G1R --> Preview
+    Preview --> Confirm{"User confirms\nYES?"}
+    NIL --> ConfirmNIL{"User confirms\nNIL YES?"}
+    Confirm -->|YES| Create["create_gst_draft_from_session"]
+    ConfirmNIL -->|YES| CreateNIL["create_gst_draft\nis_nil=True"]
+    Create --> FindCA{"Find CA via\nBusinessClient?"}
+    CreateNIL --> FindCA
+    FindCA -->|CA Found| PendingCA["FilingRecord\nstatus: pending_ca_review"]
+    FindCA -->|No CA| DraftOnly["FilingRecord\nstatus: draft"]
+    PendingCA --> Notify["WhatsApp: Sent to CA"]
+    DraftOnly --> NoCA["WhatsApp: No CA assigned"]
+    PendingCA -.-> CAList["CA sees in GST Reviews"]
+    CAList --> CADetail["Review invoices + summary"]
+    CADetail --> Approve{"CA Decision?"}
+    Approve -->|Approve| Approved["status: ca_approved"]
+    Approve -->|Changes| Changes["status: changes_requested\n+ notes to user"]
+    Approved --> Submit["CA clicks Submit\nto MasterGST"]
+    Changes -.-> PendingCA
+    Submit --> MGST{"MasterGST API"}
+    MGST -->|Success| Ack["status: acknowledged"]
+    MGST -->|Failure| Err["status: error"]
+    Ack -.-> Notify2(["User notified: Filed!"])
+    Err -.-> Notify3(["User notified: Failed"])
+    style Start fill:#e3f2fd,stroke:#1565c0
+    style PendingCA fill:#fff3e0,stroke:#e65100
+    style Approved fill:#e8f5e9,stroke:#2e7d32
+    style Ack fill:#e8f5e9,stroke:#2e7d32
+    style Err fill:#fce4ec,stroke:#c62828
+    style Changes fill:#fce4ec,stroke:#c62828`,
+
+    'chart-itr': `flowchart TD
+    Start(["User sends ITR via WhatsApp"]) --> Menu
+    Menu["ITR Menu\n1.ITR-1 2.ITR-4\n3.Upload Docs 4.Status"]
+    Menu -->|1| ITR1["ITR-1 Manual Entry"]
+    Menu -->|2| ITR4["ITR-4 Manual Entry"]
+    Menu -->|3| DocUpload["Upload Form 16\n26AS / AIS"]
+    ITR1 --> S1["Ask Salary"] --> S2["Ask Other Income"]
+    S2 --> S3["Ask 80C"] --> S4["Ask 80D"] --> S5["Ask TDS"]
+    S5 --> Compute1["compute_itr1\nOld vs New Regime"]
+    ITR4 --> T1["Ask Business Type\nBusiness 8% / Profession 50%"]
+    T1 --> GSTLink{"GST data\navailable?"}
+    GSTLink -->|Yes| AutoTurnover["Auto-fill turnover\nfrom GST invoices"]
+    GSTLink -->|No| ManualTurnover["Ask Turnover"]
+    AutoTurnover --> T3["Ask 80C then Ask TDS"]
+    ManualTurnover --> T3
+    T3 --> Compute4["compute_itr4\nPresumptive Income"]
+    DocUpload --> ParseDoc["Parse via Vision\nForm 16 / 26AS / AIS"]
+    ParseDoc --> Merge["Merge into\nMergedITRData"]
+    Merge --> Review["Review and Edit\n+ Mismatch Detection"]
+    Review --> PickForm["Pick ITR-1 or ITR-4"]
+    PickForm --> ComputeDoc["Compute from\nmerged data"]
+    Compute1 --> Show1["Show Result + Tax Payable"]
+    Compute4 --> Show4["Show Result + Tax Payable"]
+    ComputeDoc --> ShowDoc["Show Result + Tax Payable"]
+    Show1 --> AutoCreate["Auto-create ITR draft\ncreate_itr_draft_from_session"]
+    Show4 --> AutoCreate
+    ShowDoc --> AutoCreate
+    AutoCreate --> FindCA2{"Find CA via\nBusinessClient?"}
+    FindCA2 -->|CA Found| PendingCA2["ITRDraft\nstatus: pending_ca_review"]
+    FindCA2 -->|No CA| Draft3["ITRDraft\nstatus: draft"]
+    PendingCA2 --> UserMsg["WhatsApp: Auto-sent to CA\n4.PDF 5.Status 0.Menu"]
+    Draft3 --> UserMsg2["WhatsApp: Draft saved\n4.PDF 5.Status 0.Menu"]
+    PendingCA2 -.-> CAList2["CA sees in ITR Reviews"]
+    CAList2 --> CADetail2["Review computation\n+ mismatches + checklist"]
+    CADetail2 --> Approve2{"CA Decision?"}
+    Approve2 -->|Approve| Approved2["status: ca_approved"]
+    Approve2 -->|Changes| Changes2["status: changes_requested"]
+    Changes2 -.-> PendingCA2
+    Approved2 --> UserConfirm{"User confirms\nvia WhatsApp?"}
+    UserConfirm -->|YES| Filed["status: filed\nGenerate e-filing JSON"]
+    Filed -.-> FinalMsg(["User: ITR filed!"])
+    style Start fill:#e3f2fd,stroke:#1565c0
+    style PendingCA2 fill:#fff3e0,stroke:#e65100
+    style Approved2 fill:#e8f5e9,stroke:#2e7d32
+    style Filed fill:#e8f5e9,stroke:#2e7d32
+    style Changes2 fill:#fce4ec,stroke:#c62828`,
+
+    'chart-ca': `flowchart TD
+    Reg(["CA Registration\n/ca/auth/register"]) --> RegForm["Name, Email, Phone\nICAI Membership\nPassword"]
+    RegForm --> CreateCA["Create CAUser\nHash password bcrypt"]
+    CreateCA --> JWT1["Issue JWT tokens\nAccess 30min + Refresh 7d"]
+    Login(["CA Login\n/ca/auth/login"]) --> LoginForm["Email + Password"]
+    LoginForm --> RateLimit{"Rate limit\n5 per 5min?"}
+    RateLimit -->|OK| Verify["Verify bcrypt hash"]
+    RateLimit -->|Exceeded| Block["Too many attempts"]
+    Verify --> JWT2["Set httpOnly cookies\nca_token + ca_refresh"]
+    JWT1 --> Dash
+    JWT2 --> Dash
+    Dash["Dashboard Home\n/ca/dashboard"]
+    Dash --> Stats["Stat Cards\nClients / Invoices / Overdue\nPending ITR / Pending GST"]
+    Dash --> Deadlines["Upcoming Deadlines\nGSTR-1 / GSTR-3B / ITR"]
+    Dash --> Clients["My Clients\n/ca/clients"]
+    Clients --> AddClient["+ Add Client\nName, WhatsApp, GSTIN, PAN"]
+    AddClient --> LinkCA["BusinessClient.ca_id\n= current CA"]
+    Dash --> GSTList["GST Reviews\n/ca/gst-reviews"]
+    GSTList --> GSTDetail["Review Detail\n/ca/gst-reviews/id"]
+    GSTDetail --> GSTInv["View Invoices Table\nInvoice# / Date / GSTIN\nTaxable / Tax / Total"]
+    GSTDetail --> GSTApprove["Approve"]
+    GSTDetail --> GSTChanges["Request Changes\nwith notes"]
+    GSTDetail --> GSTSubmit["Submit to MasterGST"]
+    Dash --> ITRList["ITR Reviews\n/ca/itr-reviews"]
+    ITRList --> ITRDetail["Review Detail\n/ca/itr-reviews/id"]
+    ITRDetail --> ITRComp["Computation Details\nIncome / Deductions / Tax"]
+    ITRDetail --> ITRMismatch["Mismatches\nForm 16 vs 26AS vs AIS"]
+    ITRDetail --> ITRApprove["Approve"]
+    ITRDetail --> ITRChanges["Request Changes\nwith notes"]
+    GSTApprove -.-> WA1(["WhatsApp: Approved"])
+    GSTChanges -.-> WA2(["WhatsApp: Changes needed"])
+    GSTSubmit -.-> WA3(["WhatsApp: Submitted"])
+    ITRApprove -.-> WA4(["WhatsApp: Approved"])
+    ITRChanges -.-> WA5(["WhatsApp: Changes needed"])
+    style Dash fill:#f3e5f5,stroke:#6a1b9a
+    style GSTList fill:#e8f5e9,stroke:#2e7d32
+    style GSTDetail fill:#e8f5e9,stroke:#2e7d32
+    style ITRList fill:#fff3e0,stroke:#e65100
+    style ITRDetail fill:#fff3e0,stroke:#e65100
+    style GSTApprove fill:#e8f5e9,stroke:#2e7d32
+    style GSTSubmit fill:#e8f5e9,stroke:#2e7d32
+    style ITRApprove fill:#e8f5e9,stroke:#2e7d32`,
+
+    'chart-gst-states': `stateDiagram-v2
+    [*] --> draft : User confirms filing
+    draft --> pending_ca_review : CA assigned
+    pending_ca_review --> ca_approved : CA approves
+    pending_ca_review --> changes_requested : CA requests changes
+    changes_requested --> pending_ca_review : User resubmits
+    changes_requested --> draft : Reset to draft
+    ca_approved --> submitted : CA submits to MasterGST
+    submitted --> acknowledged : MasterGST acknowledges
+    submitted --> error : API failure
+    error --> draft : Retry
+    acknowledged --> [*]`,
+
+    'chart-itr-states': `stateDiagram-v2
+    [*] --> draft : Auto-created after computation
+    draft --> pending_ca_review : CA assigned
+    draft --> user_confirmed : No CA - User confirms
+    pending_ca_review --> ca_approved : CA approves
+    pending_ca_review --> changes_requested : CA requests changes
+    changes_requested --> pending_ca_review : User resubmits
+    changes_requested --> draft : Reset to draft
+    ca_approved --> user_confirmed : User confirms
+    ca_approved --> filed : CA files directly
+    user_confirmed --> filed : e-Filing submitted
+    filed --> [*]`,
+
+    'chart-assignment': `flowchart LR
+    subgraph Users
+        U1["User WhatsApp\n+91-9876543210"]
+    end
+    subgraph Clients
+        BC["BusinessClient\nwhatsapp: +91-98765\nca_id: 1\ngstin: 29AABCU..."]
+    end
+    subgraph CAs
+        CA1["CAUser id=1\nDemo CA\ndemo at ca.com"]
+    end
+    subgraph Filings
+        F1["FilingRecord\nca_id: 1"]
+        F2["ITRDraft\nca_id: 1"]
+    end
+    U1 --> BC
+    BC --> CA1
+    BC --> F1
+    BC --> F2
+    CA1 --> F1
+    CA1 --> F2
+    style Users fill:#e3f2fd,stroke:#1565c0,color:#000
+    style Clients fill:#fff3e0,stroke:#e65100,color:#000
+    style CAs fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style Filings fill:#f3e5f5,stroke:#6a1b9a,color:#000`,
+
+    'chart-api-map': `flowchart LR
+    subgraph AUTH["CA Auth /api/v1/ca/auth"]
+        A1["POST /login\nEmail + Password"]
+        A2["POST /register\nNew CA account"]
+        A3["POST /refresh\nRotate tokens"]
+        A4["GET /me\nCA profile"]
+    end
+    subgraph CLIENTS["CA Clients /api/v1/ca/clients"]
+        CL1["GET /\nList + search + paginate"]
+        CL2["POST /\nCreate client"]
+        CL3["GET /{id}\nClient detail"]
+        CL4["PUT /{id}\nUpdate client"]
+        CL5["DELETE /{id}\nDeactivate"]
+        CL6["POST /bulk-upload\nCSV import"]
+        CL7["GET /{id}/analytics\nClient stats"]
+        CL8["GET /{id}/invoices.pdf\nPDF export"]
+    end
+    subgraph REVIEWS["CA Reviews /api/v1/ca"]
+        R1["GET /itr-reviews\nList + filter + paginate"]
+        R2["GET /itr-reviews/{id}\nFull detail + computation"]
+        R3["POST /itr-reviews/{id}/approve"]
+        R4["POST /itr-reviews/{id}/request-changes"]
+        R5["PUT /itr-reviews/{id}\nEdit inputs + recompute"]
+        R6["GET /gst-reviews\nList + filter + paginate"]
+        R7["GET /gst-reviews/{id}\nFull detail + invoices"]
+        R8["POST /gst-reviews/{id}/approve"]
+        R9["POST /gst-reviews/{id}/request-changes"]
+        R10["POST /gst-reviews/{id}/submit\nSubmit to MasterGST"]
+    end
+    subgraph OTHER["Other /api/v1/ca"]
+        O1["GET /deadlines\nUpcoming GST + ITR dates"]
+    end
+    subgraph ADMIN["Admin /api/v1/admin/ca"]
+        AD1["GET /list\nAll CAs + stats"]
+        AD2["GET /pending\nAwaiting approval"]
+        AD3["GET /{id}\nCA detail"]
+        AD4["POST /{id}/approve"]
+        AD5["POST /{id}/reject"]
+        AD6["POST /{id}/toggle-active"]
+        AD7["POST /clients/{id}/transfer"]
+    end
+    style AUTH fill:#e3f2fd,stroke:#1565c0,color:#000
+    style CLIENTS fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style REVIEWS fill:#fff3e0,stroke:#e65100,color:#000
+    style OTHER fill:#f3e5f5,stroke:#6a1b9a,color:#000
+    style ADMIN fill:#fce4ec,stroke:#c62828,color:#000`,
+
+    'chart-api-ca-flow': `flowchart TD
+    Start(["Mobile / Web App"]) --> Login
+    Login["POST /api/v1/ca/auth/login\nemail + password"] --> Token["Receive JWT pair\naccess_token + refresh_token"]
+    Token --> Headers["All requests use\nAuthorization: Bearer token"]
+    Headers --> Dashboard
+    Dashboard{"CA Dashboard\nHome Screen"}
+    Dashboard --> Clients["GET /ca/clients\nPaginated list"]
+    Dashboard --> ITR["GET /ca/itr-reviews\nPending reviews"]
+    Dashboard --> GST["GET /ca/gst-reviews\nPending reviews"]
+    Dashboard --> DL["GET /ca/deadlines\nUpcoming dates"]
+    Clients --> AddClient["POST /ca/clients\nCreate new client"]
+    Clients --> BulkCSV["POST /ca/clients/bulk-upload\nCSV import"]
+    Clients --> EditClient["PUT /ca/clients/{id}\nUpdate fields"]
+    AddClient --> Validate{"Validate\nWhatsApp + PAN?"}
+    Validate -->|Valid| Created["201 Client created"]
+    Validate -->|Invalid| Errors["422 Validation errors"]
+    BulkCSV --> BulkResult["Results JSON\nadded / skipped / failed"]
+    ITR --> ITRDetail["GET /ca/itr-reviews/{id}\nComputation + mismatches"]
+    ITRDetail --> ITRApprove["POST .../approve\nca_notes optional"]
+    ITRDetail --> ITRChanges["POST .../request-changes\nca_notes required"]
+    ITRDetail --> ITREdit["PUT /ca/itr-reviews/{id}\ninput_overrides + recompute"]
+    GST --> GSTDetail["GET /ca/gst-reviews/{id}\nInvoices + summary"]
+    GSTDetail --> GSTApprove["POST .../approve"]
+    GSTDetail --> GSTChanges["POST .../request-changes"]
+    GSTDetail --> GSTSubmit["POST .../submit\nto MasterGST"]
+    ITRApprove --> WA1(["WhatsApp notification"])
+    GSTSubmit --> WA2(["WhatsApp notification"])
+    Token -.-> Refresh["POST /ca/auth/refresh\nWhen access_token expires"]
+    Refresh -.-> Token
+    style Start fill:#e0f7fa,stroke:#00838f
+    style Dashboard fill:#f3e5f5,stroke:#6a1b9a
+    style Created fill:#e8f5e9,stroke:#2e7d32
+    style Errors fill:#fce4ec,stroke:#c62828
+    style ITRApprove fill:#e8f5e9,stroke:#2e7d32
+    style GSTSubmit fill:#e8f5e9,stroke:#2e7d32`,
+
+    'chart-api-admin': `flowchart TD
+    Admin(["Admin Client\ncurl / Admin Panel"]) --> AuthHeader["X-Admin-Token header\nor admin_session cookie"]
+    AuthHeader --> List["GET /api/v1/admin/ca/list\nAll CAs with stats"]
+    AuthHeader --> Pending["GET /api/v1/admin/ca/pending\nAwaiting approval"]
+    List --> Detail["GET /admin/ca/{id}\nCA detail + client count\npending GST + ITR"]
+    Pending --> Approve["POST /admin/ca/{id}/approve\nSet approved=true"]
+    Pending --> Reject["POST /admin/ca/{id}/reject\nDeactivate account"]
+    Detail --> Toggle["POST /admin/ca/{id}/toggle-active\nEnable or disable"]
+    Detail --> Transfer["POST /admin/ca/clients/{id}/transfer\nnew_ca_id in body"]
+    Approve --> Notification(["CA can now log in"])
+    Transfer --> Moved["Client moved\nto target CA"]
+    style Admin fill:#e0f7fa,stroke:#00838f
+    style Approve fill:#e8f5e9,stroke:#2e7d32
+    style Reject fill:#fce4ec,stroke:#c62828
+    style Transfer fill:#fff3e0,stroke:#e65100`
+};
+
+async function renderAll() {
+    for (const [id, code] of Object.entries(diagrams)) {
+        try {
+            const { svg } = await mermaid.render('render-' + id, code);
+            document.getElementById(id).innerHTML = svg;
+        } catch(e) {
+            document.getElementById(id).innerHTML = '<p style="color:red">Diagram error: ' + e.message + '</p>';
+            console.error('Error rendering ' + id, e);
+        }
+    }
+}
+
+renderAll();
+
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+        const tabName = this.dataset.tab;
+        document.querySelectorAll('.diagram-section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(tabName).classList.add('active');
+        this.classList.add('active');
+    });
+});
+</script>
+
+</body>
+</html>

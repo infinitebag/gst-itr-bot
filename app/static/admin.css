@@ -1,6 +1,13 @@
+/* ==========================================================================
+   GST/ITR Bot — Admin & CA Dashboard Styles
+   ========================================================================== */
+
+/* --- Base / Admin --- */
 body {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     margin: 20px;
+    color: #1a1a2e;
+    line-height: 1.5;
 }
 
 nav a {
@@ -19,3 +26,690 @@ th {
 td, th {
     padding: 4px 8px;
 }
+
+/* ==========================================================================
+   CA Auth Pages (Login / Register)
+   ========================================================================== */
+
+.ca-auth-page {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+}
+
+.ca-auth-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 40px;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.ca-auth-card h1 {
+    margin: 0 0 4px 0;
+    font-size: 24px;
+    color: #1a1a2e;
+}
+
+.ca-auth-subtitle {
+    color: #666;
+    font-size: 14px;
+    margin: 0 0 24px 0;
+}
+
+.ca-auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.ca-auth-footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 14px;
+    color: #666;
+}
+
+.ca-auth-footer a {
+    color: #0f3460;
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   CA Layout (Sidebar + Main)
+   ========================================================================== */
+
+.ca-layout {
+    margin: 0;
+    display: flex;
+    min-height: 100vh;
+}
+
+.ca-sidebar {
+    width: 240px;
+    background: #1a1a2e;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.ca-sidebar-header {
+    padding: 24px 20px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.ca-sidebar-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.ca-name {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: rgba(255,255,255,0.6);
+}
+
+.ca-nav {
+    flex: 1;
+    padding: 12px 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.ca-nav-item {
+    display: block;
+    padding: 10px 20px;
+    color: rgba(255,255,255,0.8);
+    text-decoration: none;
+    font-size: 14px;
+    transition: background 0.15s;
+}
+
+.ca-nav-item:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+}
+
+.ca-sidebar-footer {
+    padding: 16px 20px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.ca-logout-btn {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.3);
+    color: rgba(255,255,255,0.7);
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    width: 100%;
+    transition: all 0.15s;
+}
+
+.ca-logout-btn:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+}
+
+.ca-main {
+    flex: 1;
+    background: #f5f6fa;
+    overflow-y: auto;
+}
+
+.ca-header {
+    background: #fff;
+    padding: 20px 32px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.ca-header h1 {
+    margin: 0;
+    font-size: 22px;
+    color: #1a1a2e;
+}
+
+.ca-content {
+    padding: 24px 32px;
+}
+
+/* ==========================================================================
+   Stats Cards
+   ========================================================================== */
+
+.ca-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.ca-stat-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border-left: 4px solid #0f3460;
+}
+
+.ca-stat-card.ca-stat-danger {
+    border-left-color: #e74c3c;
+}
+
+.ca-stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.ca-stat-label {
+    font-size: 13px;
+    color: #666;
+    margin-top: 4px;
+}
+
+/* ==========================================================================
+   Tables
+   ========================================================================== */
+
+.ca-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    font-size: 14px;
+}
+
+.ca-table th {
+    background: #f8f9fa;
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: #444;
+    border-bottom: 2px solid #e0e0e0;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ca-table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+}
+
+.ca-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.ca-table a {
+    color: #0f3460;
+    text-decoration: none;
+}
+
+.ca-table a:hover {
+    text-decoration: underline;
+}
+
+.ca-table-totals td {
+    border-top: 2px solid #333;
+    font-weight: 700;
+    background: #f8f9fa;
+}
+
+.ca-text-right {
+    text-align: right;
+}
+
+.ca-text-center {
+    text-align: center;
+}
+
+.ca-mono {
+    font-family: 'SF Mono', 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+}
+
+/* ==========================================================================
+   Badges
+   ========================================================================== */
+
+.ca-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.ca-badge-active { background: #e8f5e9; color: #2e7d32; }
+.ca-badge-inactive { background: #fbe9e7; color: #c62828; }
+.ca-badge-overdue { background: #ffebee; color: #c62828; }
+.ca-badge-due_soon { background: #fff8e1; color: #f57f17; }
+.ca-badge-upcoming { background: #e8f5e9; color: #2e7d32; }
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+
+.ca-btn {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+    line-height: 1.4;
+}
+
+.ca-btn-primary {
+    background: #0f3460;
+    color: #fff;
+    border-color: #0f3460;
+}
+
+.ca-btn-primary:hover {
+    background: #16213e;
+}
+
+.ca-btn-outline {
+    background: transparent;
+    color: #0f3460;
+    border-color: #0f3460;
+}
+
+.ca-btn-outline:hover {
+    background: #0f3460;
+    color: #fff;
+}
+
+.ca-btn-danger {
+    background: #e74c3c;
+    color: #fff;
+    border-color: #e74c3c;
+}
+
+.ca-btn-danger:hover {
+    background: #c0392b;
+}
+
+.ca-btn-sm { padding: 5px 12px; font-size: 13px; }
+.ca-btn-xs { padding: 3px 8px; font-size: 12px; }
+.ca-btn-full { width: 100%; text-align: center; }
+
+/* ==========================================================================
+   Forms
+   ========================================================================== */
+
+.ca-form {
+    max-width: 720px;
+}
+
+.ca-form-section {
+    background: #fff;
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.ca-form-section h3 {
+    margin: 0 0 16px;
+    font-size: 16px;
+    color: #1a1a2e;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px;
+}
+
+.ca-form-group {
+    margin-bottom: 14px;
+    flex: 1;
+}
+
+.ca-form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #444;
+    margin-bottom: 4px;
+}
+
+.ca-form-group input,
+.ca-form-group select,
+.ca-form-group textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+}
+
+.ca-form-group input:focus,
+.ca-form-group select:focus,
+.ca-form-group textarea:focus {
+    outline: none;
+    border-color: #0f3460;
+    box-shadow: 0 0 0 3px rgba(15,52,96,0.1);
+}
+
+.ca-help-text {
+    display: block;
+    font-size: 12px;
+    color: #888;
+    margin-top: 4px;
+}
+
+.ca-alert-success {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+    padding: 10px 16px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+.ca-form-row {
+    display: flex;
+    gap: 16px;
+}
+
+.ca-form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+/* ==========================================================================
+   Sections & Content Blocks
+   ========================================================================== */
+
+.ca-section {
+    margin-bottom: 28px;
+}
+
+.ca-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.ca-section-header h2 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.ca-breadcrumb {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.ca-breadcrumb a {
+    color: #0f3460;
+    text-decoration: none;
+}
+
+.ca-breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+/* ==========================================================================
+   Alerts
+   ========================================================================== */
+
+.ca-alert {
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    margin-bottom: 16px;
+}
+
+.ca-alert-error {
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #ef9a9a;
+}
+
+.ca-alert-success {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+}
+
+/* ==========================================================================
+   Client Detail
+   ========================================================================== */
+
+.ca-client-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+    padding: 20px 24px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.ca-client-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ca-client-info h2 {
+    margin: 0;
+}
+
+.ca-client-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ca-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
+}
+
+.ca-detail-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.ca-detail-wide {
+    grid-column: 1 / -1;
+}
+
+.ca-detail-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ca-detail-value {
+    font-size: 15px;
+    color: #1a1a2e;
+    margin-top: 2px;
+}
+
+/* ==========================================================================
+   Insights Card
+   ========================================================================== */
+
+.ca-insights-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border-left: 4px solid #0f3460;
+    margin-top: 12px;
+}
+
+.ca-insights-content {
+    font-size: 15px;
+    line-height: 1.7;
+    color: #333;
+}
+
+/* ==========================================================================
+   Anomaly Groups
+   ========================================================================== */
+
+.ca-anomaly-group {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.ca-anomaly-title {
+    font-size: 15px;
+    margin: 0 0 8px;
+}
+
+.ca-anomaly-list {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 14px;
+}
+
+.ca-anomaly-list li {
+    margin-bottom: 4px;
+}
+
+/* ==========================================================================
+   Deadlines
+   ========================================================================== */
+
+.ca-deadline-row.ca-deadline-overdue {
+    background: #fff5f5;
+}
+
+.ca-deadline-row.ca-deadline-due_soon {
+    background: #fffde7;
+}
+
+.ca-deadline-legend {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+    font-size: 13px;
+}
+
+/* ==========================================================================
+   Period Form
+   ========================================================================== */
+
+.ca-period-form {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
+}
+
+.ca-period-form .ca-form-row {
+    align-items: flex-end;
+}
+
+/* ==========================================================================
+   Toolbar & Search
+   ========================================================================== */
+
+.ca-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.ca-search-form {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    max-width: 500px;
+}
+
+.ca-search-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.ca-search-input:focus {
+    outline: none;
+    border-color: #0f3460;
+    box-shadow: 0 0 0 3px rgba(15,52,96,0.1);
+}
+
+/* ==========================================================================
+   Empty States
+   ========================================================================== */
+
+.ca-empty {
+    color: #888;
+    font-size: 14px;
+    font-style: italic;
+}
+
+.ca-empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.ca-empty-state h3 {
+    margin: 0 0 8px;
+    color: #444;
+}
+
+.ca-empty-state p {
+    color: #888;
+    margin: 0 0 16px;
+}
+
+/* ==========================================================================
+   Utility Colors
+   ========================================================================== */
+
+.ca-text-muted { color: #888; font-size: 14px; }
+.ca-text-success { color: #2e7d32; }
+.ca-text-warning { color: #f57f17; }
+.ca-text-danger { color: #c62828; }

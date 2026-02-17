@@ -1,29 +1,67 @@
 {% extends "admin/base.html" %}
+{% block topbar_actions %}
+    <form method="get" class="inline-form">
+        <label style="font-size:13px;color:#666;">Period:</label>
+        <select name="days" onchange="this.form.submit()" class="form-select">
+            <option value="1" {% if days == 1 %}selected{% endif %}>Last 24h</option>
+            <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
+            <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+        </select>
+    </form>
+{% endblock %}
+
 {% block content %}
-<h2>WhatsApp Usage Stats (last {{ days }} day(s))</h2>
 
-<p>Total messages (sent): <strong>{{ total_sent }}</strong></p>
-<p>Total dropped by rate limit: <strong>{{ total_dropped }}</strong></p>
+<div class="admin-stats-grid">
+    <div class="admin-stat-card success">
+        <div class="admin-stat-value">{{ total_sent }}</div>
+        <div class="admin-stat-label">Messages Sent ({{ days }}d)</div>
+    </div>
+    <div class="admin-stat-card {% if total_dropped > 0 %}danger{% else %}success{% endif %}">
+        <div class="admin-stat-value">{{ total_dropped }}</div>
+        <div class="admin-stat-label">Dropped by Rate Limit</div>
+    </div>
+</div>
 
-<h3>Top users (by sent messages)</h3>
-<table border="1" cellspacing="0" cellpadding="4">
+<div class="section-header">
+    <h2>Top Users by Message Volume</h2>
+</div>
+
+{% if users %}
+<table class="admin-table">
     <thead>
     <tr>
-        <th>To Number</th>
-        <th>Sent Count</th>
-        <th>Dropped (rate limit)</th>
-        <th>Last Message At</th>
+        <th>WhatsApp Number</th>
+        <th>Messages Sent</th>
+        <th>Dropped (Rate Limited)</th>
+        <th>Last Message</th>
     </tr>
     </thead>
     <tbody>
     {% for row in users %}
         <tr>
-            <td>{{ row.to_number }}</td>
-            <td>{{ row.sent_count }}</td>
-            <td>{{ row.dropped_count }}</td>
-            <td>{{ row.last_at }}</td>
+            <td class="mono">{{ row.to_number }}</td>
+            <td>
+                <strong>{{ row.sent_count }}</strong>
+            </td>
+            <td>
+                {% if row.dropped_count > 0 %}
+                    <span class="badge badge-danger">{{ row.dropped_count }}</span>
+                {% else %}
+                    <span class="text-muted">0</span>
+                {% endif %}
+            </td>
+            <td class="text-muted">{{ row.last_at }}</td>
         </tr>
     {% endfor %}
     </tbody>
 </table>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">&#128202;</div>
+    <h3>No Usage Data</h3>
+    <p>No WhatsApp messages have been sent in the selected period.</p>
+</div>
+{% endif %}
+
 {% endblock %}

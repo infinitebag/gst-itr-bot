@@ -2,18 +2,429 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{{ title or "Admin" }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title or "Admin" }} — GST/ITR Bot</title>
     <link rel="stylesheet" href="/static/admin.css">
+    <style>
+        /* ── Admin Layout ── */
+        body.admin-body {
+            margin: 0;
+            display: flex;
+            min-height: 100vh;
+            background: #f5f6fa;
+        }
+        .admin-sidebar {
+            width: 250px;
+            background: #1a1a2e;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            z-index: 100;
+        }
+        .admin-sidebar-header {
+            padding: 24px 20px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .admin-sidebar-header h2 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .admin-sidebar-header p {
+            margin: 4px 0 0;
+            font-size: 12px;
+            color: rgba(255,255,255,0.5);
+        }
+        .admin-nav {
+            flex: 1;
+            padding: 12px 0;
+            overflow-y: auto;
+        }
+        .admin-nav-section {
+            padding: 8px 20px 4px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.35);
+        }
+        .admin-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.15s;
+            border-left: 3px solid transparent;
+        }
+        .admin-nav-item:hover {
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+        }
+        .admin-nav-item.active {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border-left-color: #3b82f6;
+            font-weight: 600;
+        }
+        .admin-nav-item .nav-icon {
+            width: 18px;
+            text-align: center;
+            font-size: 15px;
+        }
+        .admin-nav-badge {
+            margin-left: auto;
+            background: #e74c3c;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 1px 7px;
+            border-radius: 10px;
+            min-width: 18px;
+            text-align: center;
+        }
+        .admin-sidebar-footer {
+            padding: 16px 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .admin-logout-btn {
+            background: none;
+            border: 1px solid rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.6);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            width: 100%;
+            transition: all 0.15s;
+        }
+        .admin-logout-btn:hover {
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+            border-color: rgba(255,255,255,0.4);
+        }
+
+        /* ── Main Content Area ── */
+        .admin-main {
+            flex: 1;
+            margin-left: 250px;
+            min-height: 100vh;
+        }
+        .admin-topbar {
+            background: #fff;
+            padding: 16px 32px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+        .admin-topbar h1 {
+            margin: 0;
+            font-size: 20px;
+            color: #1a1a2e;
+            font-weight: 600;
+        }
+        .admin-topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+            color: #666;
+        }
+        .admin-content {
+            padding: 28px 32px;
+        }
+
+        /* ── Admin Cards & Stats ── */
+        .admin-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+        .admin-stat-card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            border-left: 4px solid #0f3460;
+        }
+        .admin-stat-card.warning { border-left-color: #f59e0b; }
+        .admin-stat-card.danger { border-left-color: #e74c3c; }
+        .admin-stat-card.success { border-left-color: #10b981; }
+        .admin-stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1a1a2e;
+        }
+        .admin-stat-label {
+            font-size: 13px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        /* ── Admin Tables ── */
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            font-size: 14px;
+        }
+        .admin-table th {
+            background: #f8f9fa;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #444;
+            border-bottom: 2px solid #e0e0e0;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+        .admin-table td {
+            padding: 11px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            vertical-align: middle;
+        }
+        .admin-table tbody tr:hover {
+            background: #f8fafc;
+        }
+        .admin-table a {
+            color: #0f3460;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .admin-table a:hover { text-decoration: underline; }
+
+        /* ── Badges ── */
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-success { background: #e8f5e9; color: #2e7d32; }
+        .badge-warning { background: #fff8e1; color: #f57f17; }
+        .badge-danger { background: #ffebee; color: #c62828; }
+        .badge-info { background: #e3f2fd; color: #1565c0; }
+        .badge-muted { background: #f5f5f5; color: #757575; }
+
+        /* ── Buttons ── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+        .btn-primary { background: #0f3460; color: #fff; border-color: #0f3460; }
+        .btn-primary:hover { background: #16213e; }
+        .btn-success { background: #10b981; color: #fff; border-color: #10b981; }
+        .btn-success:hover { background: #059669; }
+        .btn-danger { background: #e74c3c; color: #fff; border-color: #e74c3c; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-outline { background: transparent; color: #0f3460; border-color: #cbd5e1; }
+        .btn-outline:hover { background: #f8fafc; border-color: #0f3460; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+        .btn-xs { padding: 3px 8px; font-size: 11px; }
+
+        /* ── Form Inputs ── */
+        .form-select, .form-input {
+            padding: 7px 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: inherit;
+            transition: border-color 0.15s;
+            background: #fff;
+        }
+        .form-select:focus, .form-input:focus {
+            outline: none;
+            border-color: #0f3460;
+            box-shadow: 0 0 0 3px rgba(15,52,96,0.1);
+        }
+
+        /* ── Section Headers ── */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .section-header h2 {
+            margin: 0;
+            font-size: 18px;
+            color: #1a1a2e;
+        }
+        .section-desc {
+            font-size: 14px;
+            color: #888;
+            margin: -8px 0 20px;
+        }
+
+        /* ── Empty State ── */
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+        .empty-state h3 { margin: 0 0 8px; color: #444; }
+        .empty-state p { color: #888; margin: 0; }
+
+        /* ── Inline Forms ── */
+        .inline-form {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* ── Card Wrapper ── */
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-header h3 { margin: 0; font-size: 16px; color: #1a1a2e; }
+        .card-body { padding: 20px; }
+
+        /* ── Back link ── */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #0f3460;
+            text-decoration: none;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+        .back-link:hover { text-decoration: underline; }
+
+        /* ── Profile table ── */
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            margin-bottom: 24px;
+        }
+        .profile-item {}
+        .profile-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .profile-value {
+            font-size: 15px;
+            color: #1a1a2e;
+            margin-top: 2px;
+        }
+
+        /* ── Utility ── */
+        .mono { font-family: 'SF Mono', Consolas, 'Courier New', monospace; font-size: 13px; }
+        .text-muted { color: #888; }
+        .text-success { color: #2e7d32; }
+        .text-danger { color: #c62828; }
+        .mt-0 { margin-top: 0; }
+        .mb-16 { margin-bottom: 16px; }
+        .mb-24 { margin-bottom: 24px; }
+        .gap-8 { gap: 8px; }
+    </style>
 </head>
-<body>
-<nav>
-    <a href="/admin/ui/dead-letters">Dead Letters</a> |
-    <a href="/admin/ui/usage">Usage</a> |
-    <a href="/admin/ca/dashboard">CA Dashboard</a>
-</nav>
-<hr/>
-<div class="content">
-    {% block content %}{% endblock %}
-</div>
+<body class="admin-body">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+        <div class="admin-sidebar-header">
+            <h2>GST/ITR Bot</h2>
+            <p>Super Admin Console</p>
+        </div>
+        <nav class="admin-nav">
+            <div class="admin-nav-section">CA Management</div>
+            <a href="/admin/ca/queue" class="admin-nav-item {% if request.url.path == '/admin/ca/queue' %}active{% endif %}">
+                <span class="nav-icon">&#9993;</span> Unassigned Queue
+            </a>
+            <a href="/admin/ca/list" class="admin-nav-item {% if request.url.path == '/admin/ca/list' %}active{% endif %}">
+                <span class="nav-icon">&#128101;</span> All CAs
+            </a>
+            <a href="/admin/ca/pending" class="admin-nav-item {% if request.url.path == '/admin/ca/pending' %}active{% endif %}">
+                <span class="nav-icon">&#9203;</span> Pending Approvals
+            </a>
+            <a href="/admin/ca/dashboard" class="admin-nav-item {% if request.url.path == '/admin/ca/dashboard' %}active{% endif %}">
+                <span class="nav-icon">&#128200;</span> CA Dashboard
+            </a>
+
+            <div class="admin-nav-section" style="margin-top:16px;">Monitoring</div>
+            <a href="/admin/ui/dead-letters" class="admin-nav-item {% if request.url.path == '/admin/ui/dead-letters' %}active{% endif %}">
+                <span class="nav-icon">&#128232;</span> Dead Letters
+            </a>
+            <a href="/admin/ui/usage" class="admin-nav-item {% if request.url.path == '/admin/ui/usage' %}active{% endif %}">
+                <span class="nav-icon">&#128202;</span> Usage Stats
+            </a>
+            <a href="/admin/system-health" class="admin-nav-item {% if request.url.path == '/admin/system-health' %}active{% endif %}">
+                <span class="nav-icon">&#9889;</span> System Health
+            </a>
+
+            <div class="admin-nav-section" style="margin-top:16px;">External</div>
+            <a href="/ca/auth/login" target="_blank" class="admin-nav-item">
+                <span class="nav-icon">&#128279;</span> CA Portal
+            </a>
+        </nav>
+        <div class="admin-sidebar-footer">
+            <form method="post" action="/admin/auth/logout">
+                <button type="submit" class="admin-logout-btn">Sign Out</button>
+            </form>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="admin-main">
+        <div class="admin-topbar">
+            <h1>{{ title or "Admin" }}</h1>
+            <div class="admin-topbar-actions">
+                {% block topbar_actions %}{% endblock %}
+            </div>
+        </div>
+        <div class="admin-content">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
 </body>
 </html>

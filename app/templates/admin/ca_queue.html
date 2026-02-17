@@ -1,0 +1,137 @@
+{% extends "admin/base.html" %}
+{% block content %}
+
+<div class="admin-stats-grid">
+    <div class="admin-stat-card warning">
+        <div class="admin-stat-value">{{ gst_filings|length }}</div>
+        <div class="admin-stat-label">Unassigned GST Filings</div>
+    </div>
+    <div class="admin-stat-card warning">
+        <div class="admin-stat-value">{{ itr_drafts|length }}</div>
+        <div class="admin-stat-label">Unassigned ITR Drafts</div>
+    </div>
+    <div class="admin-stat-card">
+        <div class="admin-stat-value">{{ available_cas|length }}</div>
+        <div class="admin-stat-label">Available CAs</div>
+    </div>
+</div>
+
+<p class="section-desc">Filings submitted by users with no CA assigned. Select a CA and click Assign to process them.</p>
+
+<!-- GST Filings -->
+<div class="section-header">
+    <h2>GST Filings</h2>
+</div>
+
+{% if gst_filings %}
+<table class="admin-table mb-24">
+    <thead>
+    <tr>
+        <th>Form</th>
+        <th>GSTIN</th>
+        <th>Period</th>
+        <th>User WhatsApp</th>
+        <th>User Name</th>
+        <th>NIL?</th>
+        <th>Created</th>
+        <th>Assign CA</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for f in gst_filings %}
+        <tr>
+            <td><span class="badge badge-info">{{ f.form_type or '-' }}</span></td>
+            <td class="mono">{{ f.gstin or '-' }}</td>
+            <td>{{ f.period or '-' }}</td>
+            <td class="mono">{{ f.user_whatsapp or '-' }}</td>
+            <td>{{ f.user_name or '-' }}</td>
+            <td>
+                {% if f.is_nil %}
+                    <span class="badge badge-muted">NIL</span>
+                {% else %}
+                    <span class="badge badge-success">Regular</span>
+                {% endif %}
+            </td>
+            <td>{{ f.created_at.strftime('%d %b %Y, %H:%M') if f.created_at else '-' }}</td>
+            <td>
+                <form method="post" action="/admin/ca/queue/gst/{{ f.id }}/assign" class="inline-form">
+                    <input type="hidden" name="admin_token" value="{{ admin_token }}">
+                    <select name="ca_id" required class="form-select">
+                        <option value="">Select CA</option>
+                        {% for ca in available_cas %}
+                            <option value="{{ ca.id }}">{{ ca.name }} ({{ ca.email }})</option>
+                        {% endfor %}
+                    </select>
+                    <label style="font-size:12px;white-space:nowrap;display:inline-flex;align-items:center;gap:3px;">
+                        <input type="checkbox" name="create_client" value="1"> Link
+                    </label>
+                    <button type="submit" class="btn btn-primary btn-sm">Assign</button>
+                </form>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state mb-24">
+    <div class="empty-icon">&#128230;</div>
+    <h3>No Unassigned GST Filings</h3>
+    <p>All GST filings have been assigned to CAs.</p>
+</div>
+{% endif %}
+
+<!-- ITR Drafts -->
+<div class="section-header">
+    <h2>ITR Drafts</h2>
+</div>
+
+{% if itr_drafts %}
+<table class="admin-table">
+    <thead>
+    <tr>
+        <th>Form</th>
+        <th>Assessment Year</th>
+        <th>PAN</th>
+        <th>User WhatsApp</th>
+        <th>User Name</th>
+        <th>Created</th>
+        <th>Assign CA</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for d in itr_drafts %}
+        <tr>
+            <td><span class="badge badge-info">{{ d.form_type or '-' }}</span></td>
+            <td>{{ d.assessment_year or '-' }}</td>
+            <td class="mono">{{ d.pan or '-' }}</td>
+            <td class="mono">{{ d.user_whatsapp or '-' }}</td>
+            <td>{{ d.user_name or '-' }}</td>
+            <td>{{ d.created_at.strftime('%d %b %Y, %H:%M') if d.created_at else '-' }}</td>
+            <td>
+                <form method="post" action="/admin/ca/queue/itr/{{ d.id }}/assign" class="inline-form">
+                    <input type="hidden" name="admin_token" value="{{ admin_token }}">
+                    <select name="ca_id" required class="form-select">
+                        <option value="">Select CA</option>
+                        {% for ca in available_cas %}
+                            <option value="{{ ca.id }}">{{ ca.name }} ({{ ca.email }})</option>
+                        {% endfor %}
+                    </select>
+                    <label style="font-size:12px;white-space:nowrap;display:inline-flex;align-items:center;gap:3px;">
+                        <input type="checkbox" name="create_client" value="1"> Link
+                    </label>
+                    <button type="submit" class="btn btn-primary btn-sm">Assign</button>
+                </form>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">&#128196;</div>
+    <h3>No Unassigned ITR Drafts</h3>
+    <p>All ITR drafts have been assigned to CAs.</p>
+</div>
+{% endif %}
+
+{% endblock %}

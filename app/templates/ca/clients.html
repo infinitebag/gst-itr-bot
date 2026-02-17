@@ -1,0 +1,68 @@
+{% extends "ca/base.html" %}
+{% block content %}
+
+<div class="ca-toolbar">
+    <form method="get" action="/ca/clients" class="ca-search-form">
+        <input type="text" name="q" value="{{ search_query }}" placeholder="Search by name, GSTIN, PAN, or WhatsApp..." class="ca-search-input">
+        <button type="submit" class="ca-btn ca-btn-sm">Search</button>
+        {% if search_query %}
+        <a href="/ca/clients" class="ca-btn ca-btn-sm ca-btn-outline">Clear</a>
+        {% endif %}
+    </form>
+    <a href="/ca/clients/new" class="ca-btn ca-btn-primary">+ Add Client</a>
+    <a href="/ca/clients/bulk-upload" class="ca-btn ca-btn-outline">Upload CSV</a>
+</div>
+
+{% if added_count is defined and added_count %}
+<div class="ca-alert-success">Successfully added {{ added_count }} client{{ 's' if added_count > 1 else '' }}.</div>
+{% endif %}
+
+{% if clients %}
+<table class="ca-table">
+    <thead>
+        <tr>
+            <th>Business Name</th>
+            <th>GSTIN</th>
+            <th>PAN</th>
+            <th>WhatsApp</th>
+            <th>Type</th>
+            <th>Invoices</th>
+            <th>Last Invoice</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for c in clients %}
+        <tr>
+            <td><a href="/ca/clients/{{ c.id }}"><strong>{{ c.name }}</strong></a></td>
+            <td class="ca-mono">{{ c.gstin or '-' }}</td>
+            <td class="ca-mono">{{ c.pan or '-' }}</td>
+            <td>{{ c.whatsapp_number or '-' }}</td>
+            <td>{{ c.business_type or '-' }}</td>
+            <td class="ca-text-center">{{ c.invoice_count }}</td>
+            <td>{{ c.last_invoice or '-' }}</td>
+            <td>
+                <span class="ca-badge ca-badge-{{ c.status }}">{{ c.status | title }}</span>
+            </td>
+            <td>
+                <a href="/ca/clients/{{ c.id }}/edit" class="ca-btn ca-btn-xs">Edit</a>
+                <a href="/ca/clients/{{ c.id }}/analytics" class="ca-btn ca-btn-xs">Analytics</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="ca-empty-state">
+    <h3>No clients found</h3>
+    {% if search_query %}
+    <p>No clients match "{{ search_query }}". Try a different search term.</p>
+    {% else %}
+    <p>Get started by adding your first business client.</p>
+    <a href="/ca/clients/new" class="ca-btn ca-btn-primary">+ Add Client</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}
