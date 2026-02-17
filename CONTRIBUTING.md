@@ -140,7 +140,7 @@ gst_itr_bot/
 │   │       ├── itr.py, analytics.py, tax_qa.py, ca.py
 │   │       └── knowledge.py, tax_rates.py, risk.py, payment.py
 │   ├── domain/
-│   │   ├── i18n.py                      # All user-facing strings (5 languages)
+│   │   ├── i18n.py                      # All user-facing strings (6 languages)
 │   │   └── services/
 │   │       ├── conversation_service.py  # Conversation logic helpers
 │   │       ├── gst_service.py           # GSTR-3B/GSTR-1 prep + NIL filing
@@ -401,7 +401,7 @@ make first-run
 # Then edit your API keys:
 vim .env.docker     # Fill in WHATSAPP_*, OPENAI_API_KEY, etc.
 make restart        # Restart with new keys
-make tunnel         # Start Cloudflare Tunnel (api.mytaxpe.com)
+make tunnel         # Start Cloudflare Tunnel (your-domain → localhost:8000)
 ```
 
 ### Option 2: Local Development
@@ -557,7 +557,7 @@ make test-cov        # Run pytest with coverage
 ```bash
 make env-check       # Validate required env vars are set
 make seed-ca         # Create test CA user (admin@example.com / admin123)
-make tunnel          # Start Cloudflare Tunnel (api.mytaxpe.com → localhost:8000)
+make tunnel          # Start Cloudflare Tunnel (your-domain → localhost:8000)
 make tunnel-ngrok    # Start ngrok tunnel (local dev fallback)
 make redis-cli       # Open Redis CLI
 ```
@@ -871,7 +871,7 @@ text = i18n_t("WELCOME_MENU", lang="hi")
 TDS_MENU = "TDS_MENU"
 TDS_ASK_AMOUNT = "TDS_ASK_AMOUNT"
 
-# Step 2: Add i18n keys to i18n.py (all 5 languages)
+# Step 2: Add i18n keys to i18n.py (all 6 languages)
 # "TDS_MENU": {"en": "...", "hi": "...", "gu": "...", "ta": "...", "te": "..."}
 
 # Step 3: Add state handlers in whatsapp.py
@@ -1143,7 +1143,7 @@ make run CMD='python -m pytest tests/test_itr.py -v'
 # Production deployment
 ENV_FILE=.env.production make up
 
-# Start Cloudflare Tunnel (permanent webhook at api.mytaxpe.com)
+# Start Cloudflare Tunnel (permanent webhook at your domain)
 make tunnel
 
 # Or install as system service (auto-starts on boot)
@@ -1165,7 +1165,7 @@ sudo cloudflared service install
 
 1. Go to [Meta Developer Console](https://developers.facebook.com)
 2. Select your app > WhatsApp > Configuration
-3. Set **Callback URL**: `https://api.mytaxpe.com/webhook`
+3. Set **Callback URL**: `https://your-domain.com/webhook` (your Cloudflare Tunnel or ngrok URL)
 4. Set **Verify Token**: same as `WHATSAPP_VERIFY_TOKEN` in `.env`
 5. Subscribe to: `messages`, `messaging_postbacks`
 
@@ -1237,6 +1237,6 @@ make health-json
 - [ ] No startup exceptions in `make app-logs`
 - [ ] `make compile-check` passes
 - [ ] `make lint` passes
-- [ ] All new i18n keys have all 5 languages
+- [ ] All new i18n keys have all 6 languages
 - [ ] Database migration generated if models changed
 - [ ] No secrets committed (check `git diff --cached`)

@@ -203,7 +203,7 @@ gst_itr_bot/
 │   │           ├── refund_notice.py    # Refund + notice flows (Phase 9)
 │   │           └── notification_settings.py  # Notification prefs (Phase 10)
 │   ├── domain/
-│   │   ├── i18n.py                      # Translations (5 languages)
+│   │   ├── i18n.py                      # Translations (6 languages)
 │   │   └── services/
 │   │       ├── conversation_service.py  # Chat helpers
 │   │       ├── gst_service.py           # GSTR-3B/1 + NIL filing
@@ -292,7 +292,7 @@ This is the fastest way to get running. **No Python installation needed.**
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/gst-itr-bot.git
+git clone https://github.com/infinitebag/gst-itr-bot.git
 cd gst-itr-bot
 ```
 
@@ -354,10 +354,22 @@ WHATSAPP_APP_SECRET=your_app_secret
 # Your OpenAI key
 OPENAI_API_KEY=sk-your-openai-key
 
-# Change these from defaults before going to production!
+# Change ALL of these from defaults before going to production!
+# Generate each with: openssl rand -hex 32
 ADMIN_API_KEY=a_strong_random_string
 CA_JWT_SECRET=another_strong_random_string
+ADMIN_JWT_SECRET=another_strong_random_string
+USER_JWT_SECRET=another_strong_random_string
 ```
+
+### Step 3b: Validate Your Configuration
+
+```bash
+make env-check
+```
+
+This checks all 10 required variables and flags any that are missing or still
+using unsafe defaults. Fix any ⚠️ warnings before proceeding.
 
 ### Step 4: Restart with New Keys
 
@@ -369,16 +381,46 @@ make restart
 
 WhatsApp needs a public HTTPS URL to send messages to your bot.
 
-**Production (Cloudflare Tunnel):**
+**Option A: Cloudflare Tunnel (Recommended for production)**
+
+If you have a domain and Cloudflare account, set up a named tunnel:
 
 ```bash
+# Install cloudflared (one-time)
+brew install cloudflared        # macOS
+# See https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/ for other OSes
+
+# Authenticate with Cloudflare
+cloudflared tunnel login
+
+# Create a named tunnel
+cloudflared tunnel create gst-itr-bot
+
+# Route DNS (replace with your domain)
+cloudflared tunnel route dns gst-itr-bot api.yourdomain.com
+
+# Create config file (~/.cloudflared/config.yml)
+cat > ~/.cloudflared/config.yml <<EOF
+tunnel: <YOUR_TUNNEL_ID>
+credentials-file: ~/.cloudflared/<YOUR_TUNNEL_ID>.json
+loglevel: warn
+
+ingress:
+  - hostname: api.yourdomain.com
+    service: http://localhost:8000
+  - service: http_status:404
+EOF
+
+# Start the tunnel
 make tunnel
 ```
 
-This starts the Cloudflare Tunnel, making your bot available at `https://api.mytaxpe.com`.
-The webhook URL is `https://api.mytaxpe.com/webhook`.
+Your webhook URL will be `https://api.yourdomain.com/webhook`.
 
-**Local development (ngrok alternative):**
+> **Tip:** Install as a system service for auto-start on boot:
+> `sudo cloudflared service install`
+
+**Option B: ngrok (Quick local development)**
 
 ```bash
 make tunnel-ngrok
@@ -386,6 +428,9 @@ make tunnel-ngrok
 
 This starts ngrok and shows you a URL like `https://abc123.ngrok-free.app`.
 Copy this URL — you'll need it for [Connecting WhatsApp](#connecting-whatsapp-meta-cloud-api).
+
+> **Note:** ngrok free-tier URLs change every restart. For persistent webhooks,
+> use Cloudflare Tunnel (Option A) or an ngrok paid plan.
 
 ### Step 6: Verify
 
@@ -410,7 +455,7 @@ with breakpoints, IDE integration, etc.).
 ### Step 1: Clone and Create Virtual Environment
 
 ```bash
-git clone https://github.com/your-username/gst-itr-bot.git
+git clone https://github.com/infinitebag/gst-itr-bot.git
 cd gst-itr-bot
 
 # Create virtual environment
@@ -511,7 +556,12 @@ The `--reload` flag auto-restarts the server when you change code.
 
 ```bash
 source venv/bin/activate
-rq worker default --url redis://localhost:6379/0
+
+# ARQ worker (handles WhatsApp sending, embedding jobs, ML retrain)
+arq app.infrastructure.queue.arq_settings.WorkerSettings
+
+# Or the legacy RQ worker (basic task queue)
+# rq worker default --url redis://localhost:6379/0
 ```
 
 ### Step 9: Verify
@@ -650,14 +700,14 @@ WHATSAPP_APP_SECRET=your_app_secret
 
 ### Step 3: Set Up the Webhook
 
-1. Start your bot and the Cloudflare Tunnel:
+1. Start your bot and expose it to the internet:
    ```bash
    make up          # Start the bot
-   make tunnel      # Start Cloudflare Tunnel (api.mytaxpe.com)
+   make tunnel      # Start Cloudflare Tunnel (or: make tunnel-ngrok)
    ```
 
 2. In Meta Developer Console → **WhatsApp** → **Configuration**:
-   - **Callback URL**: `https://api.mytaxpe.com/webhook`
+   - **Callback URL**: `https://your-domain.com/webhook` (your tunnel URL + `/webhook`)
    - **Verify Token**: The same value as `WHATSAPP_VERIFY_TOKEN` in your `.env`
 
 3. Click **"Verify and Save"**
@@ -995,9 +1045,10 @@ VALID    MENU      (OCR)  (5 steps) (4 steps)
 | `gu` | Gujarati | Full |
 | `ta` | Tamil | Full |
 | `te` | Telugu | Full |
+| `kn` | Kannada | Full |
 
 Users select their language from the WhatsApp menu. All bot responses, menus, and
-error messages are translated.
+error messages are translated across all 6 languages.
 
 ---
 
@@ -1118,11 +1169,12 @@ make up-deps         # Start db + redis if they're down
 ### ❌ WhatsApp messages not arriving
 
 **Fix checklist:**
-1. Is Cloudflare Tunnel running? → `make tunnel`
-2. Is webhook URL correct in Meta Console? → Should be `https://api.mytaxpe.com/webhook`
+1. Is your tunnel running? → `make tunnel` (Cloudflare) or `make tunnel-ngrok` (ngrok)
+2. Is webhook URL correct in Meta Console? → Should be `https://your-domain.com/webhook`
 3. Is verify token matching? → Check `WHATSAPP_VERIFY_TOKEN` in `.env`
-4. Check app logs → `make app-logs` (look for signature warnings)
-5. Check webhook health → `make health-json`
+4. Is app secret set? → Check `WHATSAPP_APP_SECRET` in `.env` (needed for signature verification)
+5. Check app logs → `make app-logs` (look for signature warnings)
+6. Check webhook health → `make health-json`
 
 ### ❌ Alembic "Target database is not up to date"
 
@@ -1162,8 +1214,8 @@ Before deploying to production, verify:
 - [ ] `ADMIN_JWT_SECRET` changed from default (`openssl rand -hex 32`)
 - [ ] `USER_JWT_SECRET` changed from default (`openssl rand -hex 32`)
 - [ ] CORS origins updated in `app/main.py` for your domain
-- [ ] Webhook URL set to `https://api.mytaxpe.com/webhook` in Meta Developer Console
-- [ ] Cloudflare Tunnel running (`make tunnel` or `cloudflared service install`)
+- [ ] Webhook URL set to `https://your-domain.com/webhook` in Meta Developer Console
+- [ ] Cloudflare Tunnel running (`make tunnel` or `sudo cloudflared service install`)
 - [ ] Consider managed PostgreSQL (AWS RDS, Neon, Supabase) instead of Docker
 - [ ] Consider managed Redis (AWS ElastiCache, Upstash) instead of Docker
 
