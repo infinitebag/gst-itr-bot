@@ -1,0 +1,11 @@
+# DEPRECATED: This worker is no longer needed.
+# The WhatsApp webhook now points directly to https://api.mytaxpe.com/webhook
+# via a named Cloudflare Tunnel (gst-itr-bot).
+# This file is kept for reference only.
+
+name = "gst-itr-webhook-proxy"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+TUNNEL_ORIGIN = "https://api.mytaxpe.com"
